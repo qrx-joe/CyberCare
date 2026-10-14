@@ -1,0 +1,17 @@
+# Local credentials and user uploads must stay outside version control.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+uploads/
+tmp/
+.local/
+
+# Generated application and test output, if added in a later phase.
+node_modules/
+.next/
+dist/
+coverage/
+playwright-report/
+test-results/
