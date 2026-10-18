@@ -40,6 +40,19 @@ npm.cmd run evaluate -- --live --limit=1
 
 `--limit` 仅允许 1、2、3，默认 3；本工具每批首次失败即停止，无自动重试，单请求由适配器限制为 30 秒。未知字段填值或已知字段不匹配时停止，先人工核实再决定修复与下一批。请求上限不是人民币费用上限；再次运行会新建进程和计数，不能用反复重启绕过本轮声明的上限。
 
+10/19 起可定向选择内置样本，避免每批重复前三张：
+
+```powershell
+# 离线检查这三个标签解析案例，请求 0 次
+npm.cmd run evaluate -- --cases=qr-unknown,relative-date,instruction-in-image
+# 有持续授权且声明本批上限后，才执行实际视觉请求
+npm.cmd run evaluate -- --live --limit=3 --cases=qr-unknown,relative-date,instruction-in-image
+```
+
+可用 ID 为 `complete`、`missing-registration`、`missing-year`、`qr-unknown`、`relative-date`、`instruction-in-image`、`no-text`、`dense-notes`。`--cases` 只选择预先定义的素材，不能传文件路径；报告记录请求列表与计划顺序。未知、空白、重复 ID 或重复参数在调用前拒绝；live 所选样本数超过 `--limit` 时拒绝，不偷偷截断或提高预算。不指定时保持原默认：离线 8 组，live 按上限选择前三组。离线的 `--limit` 不减少样本范围。
+
+已知字段遗漏现在也在该样本后立即停止并进入人工复核，与错配、未知填值分别计数；不等整批跑完后才报遗漏。定向离线结果仍不是视觉识别或防提示注入的模型证据。
+
 live 首批依次覆盖“完整”“缺报名方式”“缺年份”，把自己的合成文字用本机已有浏览器渲染为 PNG 后发送给 StepFun。仅在 live 模式下生成图片，不下载浏览器、不读取用户参考角色素材、不发送个人信息。缺模型配置时退出码为 2、请求数为 0，保留 `not-configured` 报告，不切换到离线结果。
 
 成功响应保存每次可得的 usage；失败后无法取得 Token 时为 `null/未知`，不编造用量。10/18 起，失败项的 `diagnostic` 记录请求阶段、HTTP 状态、耗时、超时标记、允许列表中的结束原因和可得的数字 Token 计数；不复制上游正文、任意错误消息或凭据。若模型返回了 usage 但正文 JSON / 字段校验失败，仍保留这些数字；旧报告不会追填未知原因。配置与首轮失败见 [10/18 记录](../stepfun-validation-20261018.md)。这一步仅确认合成图的连通性与有限提取行为；通过之后再准备授权真实海报，不直接扩大到大量调用。

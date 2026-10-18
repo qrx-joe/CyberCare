@@ -10,3 +10,7 @@ export function scoreFacts(expected, actual) {
   });
   return { results, counts: Object.fromEntries(['known-match', 'known-mismatch', 'omitted-known', 'unknown-preserved', 'invented-known'].map(outcome => [outcome, results.filter(result => result.outcome === outcome).length])) };
 }
+
+export function requiresReview(score) {
+  return ['known-mismatch', 'omitted-known', 'invented-known'].some(outcome => score.counts[outcome] > 0);
+}
