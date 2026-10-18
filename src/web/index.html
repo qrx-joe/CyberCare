@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>赛博公益 · 求求你了，听我把话说完</title><meta name="description" content="不求打赏，只求一点注意力。跟着概念角色了解一个无障碍问题，再完成一次海报信息核对。"><link rel="stylesheet" href="./style.css"><script type="module" src="./app.js"></script></head>
+<body>
+<a class="skip" href="#task-station">跳到海报转换</a>
+<header><a class="brand" href="./"><span class="mark" aria-hidden="true">✦</span> 赛博公益 <span class="brand-sub">CyberCare</span></a><nav aria-label="主要导航"><a id="nav-learn" href="#quick-learn">30 秒科普</a><a id="nav-task" href="#task-station">做件小事 ↗</a></nav><span class="tag">ACC 2026 · 本地 MVP</span></header>
+<main id="workspace">
+  <section class="experience" aria-labelledby="headline">
+    <div class="hero-copy"><p class="eyebrow"><span aria-hidden="true">✧</span> 赛博公益 / 先别划走</p><h1 id="headline">求求你了，<br><span>听我把话说完</span><i aria-hidden="true">♡</i></h1><p class="promise">不求打赏，只求一点注意力。</p><p class="hero-intro">你给我一点时间。<br>我带你了解一个无障碍问题，再一起修一张海报。</p>
+      <div class="speech"><span class="speaker">值班概念角色 <span>· 预设台词</span></span><p id="host-speech" role="status" aria-live="polite">来都来了，先借我 30 秒。真的，不收钱。</p></div>
+      <div class="hero-actions"><button id="host-bow" type="button" aria-describedby="host-disclosure">先磕一个 <span>2D 动作</span></button><button id="host-banter" type="button" aria-describedby="host-disclosure">随机互动</button><button id="learn-open" type="button" aria-expanded="false" aria-controls="quick-learn">先听 30 秒科普</button></div>
+      <a id="hero-task" class="mission-link" href="#task-station">好，带我做一件小事 <span aria-hidden="true">↗</span></a><p id="host-disclosure" class="hero-note">2D 表情演绎，互动为预设台词；不是实时 AI 对话，不自动播放声音。</p>
+    </div>
+    <figure class="character-card"><div class="character-top"><span><span class="status-dot" aria-hidden="true"></span> 今天也在努力留住你的注意力</span><button id="host-motion" type="button" aria-pressed="true">角色动作：开</button></div><div id="character-frame" class="character-frame"><img id="character-image" src="./reference-poster.jpg" alt="" decoding="async"><div id="avatar-animation" hidden aria-hidden="true"><div class="avatar-orbit"></div><div id="avatar-body"><canvas id="avatar-canvas" width="1024" height="1024"></canvas></div></div><div id="character-fallback" hidden><span aria-hidden="true">(｡･ω･｡)ﾉ♡</span><p>角色素材未附带。<br>没关系，我先用文字把话说完。</p></div><span id="bow-sound" hidden aria-hidden="true">咚。</span></div><figcaption><span id="avatar-kind">角色动画正在准备</span><br><span>本地概念原型 · 非 3D 骨骼或语音口型同步；对外素材授权待核实。</span></figcaption></figure>
+  </section>
+  <section id="quick-learn" class="quick-learn" aria-labelledby="learn-title" hidden><div><p class="eyebrow">先知道为什么，再决定要不要动手</p><h2 id="learn-title" tabindex="-1">图片里的字，谁来读？</h2><p id="learn-text">一张海报对你是活动信息，对依赖读屏的人，却可能只是一张没有说明的图片。给它一份等效文字，就多了一个获取信息的入口。</p><p class="learn-source"><span id="learn-index">固定科普示例 1 / 3 · 非每日更新服务</span> · <a id="learn-source" href="https://www.w3.org/WAI/tutorials/images/" target="_blank" rel="noopener noreferrer">资料：W3C 图片教程</a></p></div><div class="learn-actions"><button id="learn-next" type="button">再听一条</button><a id="learn-task" href="#task-station">懂了，去修一张海报 ↗</a></div></section>
+  <section id="task-station" class="task-station" aria-labelledby="task-title"><div class="task-intro"><div><p class="eyebrow">注意力有了，接下来做件小事</p><h2 id="task-title" tabindex="-1">今天的任务：让一张海报能被读到</h2><p>核对完成后，可以带走可读文字、大字页面和一份核对记录。先看看示例，再决定是否提交自己的海报。</p></div><span class="mission-tag">当前只做这一件事</span></div>
+  <details id="sample-preview" class="sample-preview"><summary id="sample-preview-toggle">先看结果示例 <span>不提交材料</span></summary>
+    <p class="callout">合成示例 · 只读预览。尚未检测、尚未人工确认，不能作为正式回执。</p>
+    <p id="sample-preview-status" class="muted">正在读取本地合成样例…</p>
+    <div id="sample-preview-content" hidden>
+      <div class="preview-grid">
+        <article class="preview-card"><p class="eyebrow">01 / 可读文字</p><h3>重要信息，单独列出</h3><dl id="sample-facts"></dl></article>
+        <article class="preview-card preview-reading"><p class="eyebrow">02 / 大字页面</p><h3>换一种更清楚的排版</h3><h4 id="sample-reading-title"></h4><p id="sample-reading-time"></p><p id="sample-reading-location"></p><p class="muted">这里只展示排版。正式页面须完成检测与逐项确认后导出。</p></article>
+        <article class="preview-card"><p class="eyebrow">03 / 核对记录</p><h3>哪些做了，哪些还没做</h3><dl><dt>材料</dt><dd>开发者原创合成样例</dd><dt>自动检测</dt><dd>未执行</dd><dt>人工确认</dt><dd>未完成</dd><dt>正式回执</dt><dd>尚未生成</dd></dl></article>
+      </div>
+      <details><summary>查看示例的完整转录</summary><pre id="sample-original"></pre></details>
+      <a id="sample-to-form" href="#input-title">了解了，去提交与核对 ↗</a>
+    </div>
+  </details>
+  <ol class="steps" aria-label="处理流程"><li>01 提交材料</li><li>02 修正与检测</li><li>03 确认并导出</li></ol>
+  <p id="notice" role="status" aria-live="polite">正在读取本地配置…</p><p id="error" role="alert" hidden></p>
+  <div class="layout">
+    <section class="panel" aria-labelledby="input-title"><div class="panel-heading"><span class="number">01</span><h2 id="input-title" tabindex="-1">提交一张海报</h2></div>
+      <form id="input-form">
+        <label for="mode">处理方式</label><select id="mode"><option value="sample">内置合成样例 · 无需网络，非 AI</option><option value="manual">上传海报 + 人工转录 · 非 OCR / AI</option><option value="live" disabled>真实视觉识别 · 未配置</option></select>
+        <p id="mode-help" class="muted">原创合成海报用于验证流程，不代表真实公益活动或模型效果。</p>
+        <div id="file-group" hidden><label for="image">海报图片（PNG / JPEG / WebP，最多 2 MB）</label><input id="image" type="file" accept="image/png,image/jpeg,image/webp"><p class="muted">请勿上传身份证、手机号等个人资料、密码或验证码。</p></div>
+        <img id="poster-preview" src="./poster.svg" alt="合成海报：一起读书，社区公益阅读会。完整文字位于下方转录框。">
+        <label for="transcript">海报转录文字</label><textarea id="transcript" rows="8" readonly></textarea><p id="text-help" class="muted">标签解析支持“活动名称：”“活动时间：”“活动地点：”“报名方式：”；不匹配的字段保留为未知。</p>
+        <label for="source-note">材料来源 / 使用依据</label><input id="source-note" maxlength="500" value="开发者原创合成演示海报；非真实活动" required>
+        <label class="check"><input id="permission" type="checkbox" required><span>我确认有权处理该材料；真实识别模式会将图片发给 StepFun。供应商留存策略尚未核实。</span></label>
+        <button class="primary" id="create" type="submit">生成待核对草稿 <span aria-hidden="true">↗</span></button>
+      </form>
+      <p class="privacy">本地单进程演示 · 原图仅在内存处理，不写入磁盘。任务及文字最多保留 30 分钟，重启即丢失；浏览器刷新会隐藏当前任务，未到期内容仍在服务端内存。删除不能撤回已发送的第三方请求。</p>
+    </section>
+    <section class="panel result-panel" aria-labelledby="result-title"><div class="panel-heading"><span class="number">02</span><h2 id="result-title" tabindex="-1">核对与回执</h2><button id="large" class="small" type="button" aria-pressed="false">大字模式</button></div>
+      <div id="empty"><span class="empty-symbol" aria-hidden="true">Aa</span><h3>让信息从图片里走出来</h3><p>先生成草稿，再逐项核对。<br>未知信息可以保留，不需要猜一个答案。</p><p class="muted">自动检测通过 ≠ 事实准确<br>人工确认 ≠ 用户验证或机构采用</p></div>
+      <div id="task-controls" hidden><p id="task-meta" class="muted"></p><div class="actions"><button id="cancel" type="button" hidden>取消处理</button><button id="delete" type="button">删除当前任务</button></div></div>
+      <div id="draft" hidden>
+        <p id="provider-label" class="callout"></p>
+        <details><summary>查看原始转录、整理内容与不确定项</summary><h3>原始转录（可能有识别错误）</h3><pre id="original"></pre><h3>初次提取概述 / 图像说明（保留用于对照）</h3><p id="summary"></p><ul id="uncertainties"></ul></details>
+        <form id="edit-form"><div id="fact-fields"></div>
+          <details id="content-editor" hidden><summary>修正完整文字、概述与图像说明</summary><p class="muted">四项信息和下方正文会分别导出，请核对两处是否一致。修订保留提取原文与修改依据；保存后须重新检测。</p><label for="content-original">核对后的完整文字</label><textarea id="content-original" rows="8" maxlength="12000" required></textarea><label for="content-summary">核对后的概述</label><textarea id="content-summary" rows="3" maxlength="1500"></textarea><label for="content-description">核对后的图像说明</label><textarea id="content-description" rows="3" maxlength="1500"></textarea></details>
+          <label for="edit-reason">修改依据（有修改时必填）</label><input id="edit-reason" maxlength="700" placeholder="例如：对照原图更正；或补充已核实资料的来源"><button id="save" type="submit">保存修改并使旧检测失效</button></form>
+        <div class="audit-box"><h3>自动检测</h3><p>检测对象：本次将导出的完整 HTML；不检测海报事实。</p><button id="audit" type="button">检测当前草稿</button><pre id="audit-output">尚未检测；不能确认或导出。</pre></div>
+        <form id="review-form"><fieldset><legend>逐项核对（空白字段表示确认保留未知）</legend><div id="confirm-fields"></div><label class="check"><input id="confirm-content" type="checkbox"><span>我已对照材料核对四项信息与完整文字、概述、图像说明的一致性，并理解仍可能存在错误。</span></label></fieldset><button class="primary" id="confirm" type="submit">确认当前版本并生成回执</button></form>
+      </div>
+      <div id="completed" hidden><p class="host-finish">“这次咱俩都站着。”</p><h3>本次核对流程已完成</h3><p class="callout">这是一份处理记录。尚无目标用户体验或机构采用证据。</p><div class="actions"><button id="export-text" type="button">下载纯文本</button><button id="export-html" type="button">下载大字 HTML</button><button id="export-receipt" type="button">下载证据 JSON</button><button id="copy" type="button">复制文字</button></div><label for="feedback">这份结果对当前任务有帮助吗？</label><select id="feedback"><option value="">尚未反馈</option><option value="helped">有帮助（自报）</option><option value="partly">部分有帮助（自报）</option><option value="not_helped">没有帮助（自报）</option></select><button id="send-feedback" type="button">保存自报反馈</button><p id="feedback-status" class="muted"></p><pre id="final-text"></pre></div>
+    </section>
+  </div>
+  </section>
+</main><footer><span>赛博公益 · 磕头只是开场，事情还得一起做。</span><span>本地技术演示 · 角色作用与社会效果仍待验证</span></footer>
+</body></html>
