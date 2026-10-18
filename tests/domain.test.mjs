@@ -16,6 +16,28 @@ test('无转录依据的模型字段归为未知', () => {
   const e = fromTranscript(SAMPLE_TEXT); e.facts.registration = { value: '扫码报名', evidence: '自行补全' };
   assert.equal(normalizeExtraction(e).facts.registration.value, null);
 });
+
+test('导出提醒接收者核实缺少年份的日期；核实补充后移除提醒并失效旧检测', async () => {
+  const service = createTaskService();
+  try {
+    const t = service.create({ mode:'manual', permission:true, sourceNote:'开发者原创合成日期检查',
+      text:'活动名称：合成阅读会\n活动时间：10 月 24 日 14:00—16:00\n活动地点：示例活动室\n报名方式：现场登记' }, 'one', 'recipient-date');
+    await tick();
+    const original = structuredClone(t.extraction);
+    const html = renderHtml(t);
+    assert.ok(renderText(t).includes('年份待核实'));
+    assert.ok(html.includes('年份待核实'));
+    assert.ok(html.indexOf('年份待核实') < html.indexOf('<h2>完整文字与来源'));
+    assert.equal(t.values.time, '10 月 24 日 14:00—16:00');
+    t.audit = { revision:1, htmlHash:hash(html), at:'test', engine:'test stub', violations:[], incomplete:[], passes:0 };
+    editTask(t, 1, { ...t.values, time:'2026 年 10 月 24 日 14:00—16:00' }, '合成测试：对照独立答案核实年份');
+    assert.equal(t.audit, undefined);
+    assert.ok(!renderText(t).includes('年份待核实'));
+    assert.ok(!renderHtml(t).includes('年份待核实'));
+    assert.deepEqual(t.extraction, original);
+    assert.notEqual(hash(renderHtml(t)), hash(html));
+  } finally { service.close(); }
+});
 test('未逐项确认和无授权输入拒绝', () => {
   assert.equal(inputSchema.safeParse({ ...input, permission: false }).success, false);
   assert.equal(reviewSchema.safeParse({ revision: 1, confirmed: {}, contentConfirmed: true }).success, false);

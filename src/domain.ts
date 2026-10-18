@@ -60,12 +60,21 @@ export function confirmTask(task: Task, revision: number) {
   task.status = 'completed';
 }
 
+// A recipient keeps the current date caution even after leaving the review UI.
+function dateReviewNote(task: Task): string {
+  const time = task.values?.time.trim();
+  return time && !/(?:19|20)\d{2}/.test(time)
+    ? '年份待核实：活动时间未识别到完整年份。请向活动方确认完整日期后再安排行程；不要按阅读当天推算或自行补全年份。' : '';
+}
+
 export function renderText(task: Task): string {
   const e = task.extraction!;
   const content = task.reviewedContent ?? e;
-  return `海报文字版\n${fieldKeys.map(k => `${FIELDS[k]}：${task.values![k] || '未知，请向活动方核实'}`).join('\n')}\n\n内容概述\n${content.summary}\n\n图像说明\n${content.description}\n\n完整文字（可人工修订）\n${content.original}\n\n提取时的不确定项（修订记录另见回执）\n${e.uncertainties.join('\n') || '无额外标记；仍需人工核对。'}\n\n来源：${task.source.note}\n处理路径：${task.source.mode}\n原始提取与人工修订依据保存在证据 JSON 中；四项信息与完整文字需分别核对。\n本文件不代表 WCAG 认证、真实用户验证或机构采用。`;
+  const dateNote = dateReviewNote(task);
+  return `海报文字版\n${fieldKeys.map(k => `${FIELDS[k]}：${task.values![k] || '未知，请向活动方核实'}`).join('\n')}${dateNote ? `\n\n${dateNote}` : ''}\n\n内容概述\n${content.summary}\n\n图像说明\n${content.description}\n\n完整文字（可人工修订）\n${content.original}\n\n提取时的不确定项（修订记录另见回执）\n${e.uncertainties.join('\n') || '无额外标记；仍需人工核对。'}\n\n来源：${task.source.note}\n处理路径：${task.source.mode}\n原始提取与人工修订依据保存在证据 JSON 中；四项信息与完整文字需分别核对。\n本文件不代表 WCAG 认证、真实用户验证或机构采用。`;
 }
 /** One controlled template is both audited and exported, with all content escaped. */
 export function renderHtml(task: Task): string {
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>海报文字版</title><style>body{font:1.25rem/1.8 system-ui,sans-serif;color:#17221c;background:#fafbf6;max-width:48rem;margin:2rem auto;padding:1rem;overflow-wrap:anywhere}h1{font-size:2rem}pre{font:inherit;white-space:pre-wrap}dt{font-weight:700}dd{margin:0 0 1rem}</style></head><body><main><h1>海报文字版</h1><dl>${fieldKeys.map(k => `<dt>${FIELDS[k]}</dt><dd>${escapeHtml(task.values![k] || '未知，请向活动方核实')}</dd>`).join('')}</dl><h2>完整文字与来源</h2><pre>${escapeHtml(renderText(task))}</pre></main></body></html>`;
+  const dateNote = dateReviewNote(task);
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>海报文字版</title><style>body{font:1.25rem/1.8 system-ui,sans-serif;color:#17221c;background:#fafbf6;max-width:48rem;margin:2rem auto;padding:1rem;overflow-wrap:anywhere}h1{font-size:2rem}pre{font:inherit;white-space:pre-wrap}dt{font-weight:700}dd{margin:0 0 1rem}</style></head><body><main><h1>海报文字版</h1><dl>${fieldKeys.map(k => `<dt>${FIELDS[k]}</dt><dd>${escapeHtml(task.values![k] || '未知，请向活动方核实')}</dd>`).join('')}</dl>${dateNote ? `<p><strong>${escapeHtml(dateNote)}</strong></p>` : ''}<h2>完整文字与来源</h2><pre>${escapeHtml(renderText(task))}</pre></main></body></html>`;
 }
