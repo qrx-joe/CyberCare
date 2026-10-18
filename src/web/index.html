@@ -3,18 +3,39 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>赛博公益 · 求求你了，听我把话说完</title><meta name="description" content="不求打赏，只求一点注意力。跟着概念角色了解一个无障碍问题，再完成一次海报信息核对。"><link rel="stylesheet" href="./style.css"><script type="module" src="./app.js"></script></head>
 <body>
 <a class="skip" href="#task-station">跳到海报转换</a>
-<header><a class="brand" href="./"><span class="mark" aria-hidden="true">公<br>益</span><span>赛博公益<small class="brand-sub">CYBERCARE</small></span></a><nav aria-label="主要导航"><a id="nav-learn" href="#quick-learn">30 秒科普</a><a id="nav-task" href="#task-station">做件小事 <span aria-hidden="true">↗</span></a></nav><span class="tag">ACC 2026<br>本地演示</span></header>
+<header>
+<div class="notice-bar"><div><span><b>CYBERCARE / 本地概念原型</b>　一点注意力，也有用。</span><span>从一张海报开始。</span></div></div>
+<div class="header-inner">
+  <a class="brand" href="./"><span class="mark" aria-hidden="true">公!</span><span>赛博公益<small class="brand-sub">CYBERCARE / ACCESS FOR PEOPLE</small></span></a>
+  <nav aria-label="主要导航"><a id="nav-learn" href="#quick-learn">30 秒科普</a><a id="nav-task" href="#task-station">做件小事 <span aria-hidden="true">↗</span></a></nav>
+  <div class="header-tools"><button id="large" type="button" aria-pressed="false">A+ 大字模式</button><span class="tag">本地演示</span></div>
+</div>
+</header>
 <main id="workspace">
   <section class="experience" aria-labelledby="headline">
-    <div class="hero-copy"><p class="eyebrow"><span class="section-index">01</span> 先别划走 / 一点注意力，也有用</p><h1 id="headline"><span class="headline-preface">求求你了，</span><span class="headline-main">听我把话<br>说完<span class="headline-stop" aria-hidden="true">。</span></span></h1><p class="promise">不求打赏，只求一点注意力。</p><p class="hero-intro">你给我一点时间。<br>我带你了解一个无障碍问题，再一起修一张海报。</p>
-      <div class="speech"><span class="speaker">值班概念角色 <span>· 预设台词</span></span><p id="host-speech" role="status" aria-live="polite">来都来了，先借我 30 秒。真的，不收钱。</p></div>
-      <a id="hero-task" class="mission-link" href="#task-station">好，带我做一件小事 <span aria-hidden="true">↗</span></a>
-      <div class="hero-actions"><button id="host-bow" type="button" aria-describedby="host-disclosure">先磕一个 <span>2D 动作</span></button><button id="host-banter" type="button" aria-describedby="host-disclosure">随机互动</button><button id="learn-open" type="button" aria-expanded="false" aria-controls="quick-learn">先听 30 秒科普</button></div><p id="host-disclosure" class="hero-note">2D 表情演绎，互动为预设台词；不是实时 AI 对话，不自动播放声音。</p>
+    <div class="hero-copy">
+      <p class="hero-kicker">公益小事 / 先别划走</p>
+      <h1 id="headline"><span class="headline-preface">求求你了，</span><span class="headline-main">听我把话<br>说完<span class="headline-stop" aria-hidden="true">。</span></span></h1>
+      <p class="promise">不求打赏，只求一点注意力。</p>
+      <p class="hero-intro">一张海报里的信息，应该能被更多人读到。<br>先了解一个无障碍问题，再一起把时间、地点与报名方式核对清楚。</p>
+      <div class="hero-primary-actions"><a id="hero-task" class="mission-link" href="#task-station">好，带我做一件小事 <span aria-hidden="true">↗</span></a><button id="learn-open" type="button" aria-expanded="false" aria-controls="quick-learn">先听 30 秒科普 <span aria-hidden="true">↓</span></button></div>
+      <p class="hero-footnote">ATTENTION INTO ACTION<br><span>让信息多一个入口，让行动从小事开始。</span></p>
     </div>
-    <figure class="character-card"><div class="character-top"><span>今天也在努力留住你的注意力</span><button id="host-motion" type="button" aria-pressed="true">角色动作：开</button></div><div id="character-frame" class="character-frame"><span class="character-side-note" aria-hidden="true">不求打赏<br>只求一点注意力</span><img id="character-image" src="./reference-poster.jpg" alt="" decoding="async"><div id="avatar-animation" hidden aria-hidden="true"><div id="avatar-body"><canvas id="avatar-canvas" width="1024" height="1024"></canvas></div></div><div id="character-fallback" hidden><span aria-hidden="true">(｡･ω･｡)ﾉ♡</span><p>角色素材未附带。<br>没关系，我先用文字把话说完。</p></div><span id="bow-sound" hidden aria-hidden="true">咚。</span></div><figcaption><span id="avatar-kind">角色动画正在准备</span><details class="asset-note"><summary>关于角色素材</summary><p>本地概念原型 · 非 3D 骨骼或语音口型同步；对外素材授权待核实。</p></details></figcaption></figure>
+    <figure class="character-card">
+      <div class="character-top"><span>ATTENTION DESK / 概念角色</span><button id="host-motion" type="button" aria-pressed="true">角色动作：开</button></div>
+      <div id="character-frame" class="character-frame"><span class="character-side-note" aria-hidden="true">一点<br>注意力<br>也有用</span><img id="character-image" src="./reference-poster.jpg" alt="" decoding="async"><div id="avatar-animation" hidden aria-hidden="true"><div id="avatar-body"><canvas id="avatar-canvas" width="1024" height="1024"></canvas></div></div><div id="character-fallback" hidden><span aria-hidden="true">(｡･ω･｡)ﾉ♡</span><p>角色素材未附带。<br>没关系，我先用文字把话说完。</p></div><span id="bow-sound" hidden aria-hidden="true">咚。</span></div>
+      <div class="speech"><span class="speaker">概念角色 <span>· 预设台词</span></span><p id="host-speech" role="status" aria-live="polite">来都来了，先借我 30 秒。真的，不收钱。</p></div>
+      <div class="hero-actions"><button id="host-bow" type="button" aria-describedby="host-disclosure">先磕一个 <span>2D 动作</span></button><button id="host-banter" type="button" aria-describedby="host-disclosure">随机互动</button></div>
+      <p id="host-disclosure" class="hero-note">2D 表情演绎，互动为预设台词；不是实时 AI 对话，不自动播放声音。</p>
+      <figcaption><span id="avatar-kind">角色动画正在准备</span><details class="asset-note"><summary>关于角色素材</summary><p>本地概念原型 · 非 3D 骨骼或语音口型同步；对外素材授权待核实。</p></details></figcaption>
+    </figure>
   </section>
+  <div class="promise-strip" role="group" aria-label="当前任务与产物"><div><span>01 / MATERIAL</span><strong>从一张活动海报开始</strong></div><div><span>02 / REVIEW</span><strong>未知保留，逐项核对</strong></div><div><span>03 / TAKE AWAY</span><strong>文字 · 大字页面 · 核对记录</strong></div></div>
   <section id="quick-learn" class="quick-learn" aria-labelledby="learn-title" hidden><div><p class="eyebrow">先知道为什么，再决定要不要动手</p><h2 id="learn-title" tabindex="-1">图片里的字，谁来读？</h2><p id="learn-text">一张海报对你是活动信息，对依赖读屏的人，却可能只是一张没有说明的图片。给它一份等效文字，就多了一个获取信息的入口。</p><p class="learn-source"><span id="learn-index">固定科普示例 1 / 3 · 非每日更新服务</span> · <a id="learn-source" href="https://www.w3.org/WAI/tutorials/images/" target="_blank" rel="noopener noreferrer">资料：W3C 图片教程</a></p></div><div class="learn-actions"><button id="learn-next" type="button">再听一条</button><a id="learn-task" href="#task-station">懂了，去修一张海报 ↗</a></div></section>
-  <section id="task-station" class="task-station" aria-labelledby="task-title"><div class="task-intro"><div><p class="eyebrow"><span class="section-index">02</span> 把注意力，变成一点用处</p><h2 id="task-title" tabindex="-1">让一张海报，<br>能被读到。</h2><p>核对完成后，带走可读文字、大字页面和核对记录。<br>先看看示例，再决定是否提交自己的海报。</p></div><span class="mission-tag">当前只做<br><strong>这一件事。</strong></span></div>
+  <section id="task-station" class="task-station" aria-labelledby="task-title"><div class="task-intro"><div><p class="eyebrow">01 / POSTER REVIEW</p><h2 id="task-title" tabindex="-1">让一张海报，<br>能被读到。</h2></div><p>对照原图，核实关键信息。<br>不知道的就保留未知；确认完成后，再带走可读结果。</p></div>
+  <div class="repair-desk">
+    <aside class="desk-side" aria-label="海报核对流程"><p class="eyebrow">ONE SMALL ACTION</p><p class="desk-code" aria-hidden="true">一张<br>海报。</p><ol class="steps" aria-label="处理流程"><li id="step-input" aria-current="step"><span>01</span>提交材料</li><li id="step-review"><span>02</span>对照核对</li><li id="step-export"><span>03</span>确认导出</li></ol><p class="desk-note"><strong>没写的，不替它编。</strong><br>检测检查页面规则，事实仍需对照材料核实。</p></aside>
+    <div class="desk-main"><div class="desk-head"><strong>REVIEW DESK / 海报核对台</strong><span id="desk-status">等待提交材料</span></div>
   <details id="sample-preview" class="sample-preview"><summary id="sample-preview-toggle">先看结果示例 <span>不提交材料</span></summary>
     <p class="callout">合成示例 · 只读预览。尚未检测、尚未人工确认，不能作为正式回执。</p>
     <p id="sample-preview-status" class="muted">正在读取本地合成样例…</p>
@@ -28,10 +49,9 @@
       <a id="sample-to-form" href="#input-title">了解了，去提交与核对 ↗</a>
     </div>
   </details>
-  <ol class="steps" aria-label="处理流程"><li>01 提交材料</li><li>02 修正与检测</li><li>03 确认并导出</li></ol>
   <p id="notice" role="status" aria-live="polite">正在读取本地配置…</p><p id="error" role="alert" hidden></p>
   <div class="layout">
-    <section class="panel" aria-labelledby="input-title"><div class="panel-heading"><span class="number">01</span><h2 id="input-title" tabindex="-1">提交一张海报</h2></div>
+    <section class="panel" aria-labelledby="input-title"><p class="panel-label">INPUT / 原始材料</p><div class="panel-heading"><h2 id="input-title" tabindex="-1">提交一张海报</h2></div>
       <form id="input-form">
         <label for="mode">处理方式</label><select id="mode"><option value="sample">内置合成样例 · 无需网络，非 AI</option><option value="manual">上传海报 + 人工转录 · 非 OCR / AI</option><option value="live" disabled>真实视觉识别 · 未配置</option></select>
         <p id="mode-help" class="muted">原创合成海报用于验证流程，不代表真实公益活动或模型效果。</p>
@@ -44,7 +64,7 @@
       </form>
       <p class="privacy">本地单进程演示 · 原图仅在内存处理，不写入磁盘。任务及文字最多保留 30 分钟，重启即丢失；浏览器刷新会隐藏当前任务，未到期内容仍在服务端内存。删除不能撤回已发送的第三方请求。</p>
     </section>
-    <section class="panel result-panel" aria-labelledby="result-title"><div class="panel-heading"><span class="number">02</span><h2 id="result-title" tabindex="-1">核对与回执</h2><button id="large" class="small" type="button" aria-pressed="false">大字模式</button></div>
+    <section class="panel result-panel" aria-labelledby="result-title"><p class="panel-label">REVIEW / 对照、修订与确认</p><div class="panel-heading"><h2 id="result-title" tabindex="-1">核对与回执</h2></div>
       <div id="empty"><span class="empty-symbol" aria-hidden="true">Aa</span><h3>让信息从图片里走出来</h3><p>先生成草稿，再逐项核对。<br>未知信息可以保留，不需要猜一个答案。</p><p class="muted">自动检测通过 ≠ 事实准确<br>人工确认 ≠ 用户验证或机构采用</p></div>
       <div id="task-controls" hidden><p id="task-meta" class="muted"></p><div class="actions"><button id="cancel" type="button" hidden>取消处理</button><button id="delete" type="button">删除当前任务</button></div></div>
       <div id="draft" hidden>
@@ -58,6 +78,8 @@
       </div>
       <div id="completed" hidden><p class="host-finish">“这次咱俩都站着。”</p><h3>本次核对流程已完成</h3><p class="callout">这是一份处理记录。尚无目标用户体验或机构采用证据。</p><div class="actions"><button id="export-text" type="button">下载纯文本</button><button id="export-html" type="button">下载大字 HTML</button><button id="export-receipt" type="button">下载证据 JSON</button><button id="copy" type="button">复制文字</button></div><label for="feedback">这份结果对当前任务有帮助吗？</label><select id="feedback"><option value="">尚未反馈</option><option value="helped">有帮助（自报）</option><option value="partly">部分有帮助（自报）</option><option value="not_helped">没有帮助（自报）</option></select><button id="send-feedback" type="button">保存自报反馈</button><p id="feedback-status" class="muted"></p><pre id="final-text"></pre></div>
     </section>
+  </div>
+    </div>
   </div>
   </section>
 </main><footer><span>赛博公益 <span class="footer-divider" aria-hidden="true">/</span> 磕头只是开场，事情还得一起做。</span><span>本地技术演示 · 角色作用与社会效果仍待验证</span></footer>

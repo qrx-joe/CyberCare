@@ -163,6 +163,15 @@ function render() {
   el('draft').hidden = task?.status !== 'needs_review';
   el('completed').hidden = task?.status !== 'completed';
   el('cancel').hidden = task?.status !== 'processing';
+  // Progress reflects the existing task state; it never bypasses review gates.
+  const step = task?.status === 'completed' ? 'export' : task?.status === 'needs_review' ? 'review' : 'input';
+  for (const name of ['input', 'review', 'export']) {
+    const item = el(`step-${name}`);
+    if (name === step) item.setAttribute('aria-current', 'step'); else item.removeAttribute('aria-current');
+  }
+  const deskStatus = el('desk-status');
+  deskStatus.textContent = task ? { processing: '正在整理材料', needs_review: '等待人工核对', completed: '已确认，可导出', failed: '处理失败，请查看说明', cancelled: '任务已取消' }[task.status] : '等待提交材料';
+  deskStatus.dataset.state = task?.status ?? 'empty';
   if (!task) return;
   const states = { processing: '正在处理', needs_review: '等待核对', completed: '已确认', failed: '处理失败', cancelled: '已取消' };
   el('task-meta').textContent = `任务 ${task.id} · 版本 ${task.revision} · ${states[task.status]} · ${new Date(task.expiresAt).toLocaleString('zh-CN')} 到期`;
