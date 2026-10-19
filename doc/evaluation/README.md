@@ -2,7 +2,9 @@
 
 本包用于先完成可复查的技术准备。**当前已有两张不同公开真实海报的结果与错误记录；没有目标用户测试或机构采用记录。** 当前目标见 [目标核验](../product-target-20261017.md)，用户研究使用 [协议和空白记录](user-study.md)。
 
-10/19 独立中文：1 次请求、0 重试、4,378 tokens。原模型 3 匹配 / 1 报名说明遗漏；旧应用误丢多行地点后为 2 匹配 / 2 遗漏，修复后同输出离线回放恢复 3 / 1，没有追加模型调用。原报告、先验答案和代理修订分开保留，见[案例与引用定位修复](../chinese-poster-and-evidence-20261019.md)。业务 32 项、全量浏览器 28 项通过，下一项先明确报名指引与目标 URL 的区别。
+10/19 当前：v3 同图复查已保留报名指引并明确目标及可用性未知，本批 1 次请求、0 重试、5,208 tokens，4 个已知字段匹配，无代理字段/正文修订。旧合成二维码案例暴露答案口径混用，已保留原答案并禁止新 live 使用，新增两种明确边界；见[规则及本批限制](../registration-guidance-20261019.md)。业务 33 项、离线 10 组通过，模型泛化、用户效果与实际采用仍未验证。
+
+10/19 中文首批：1 次请求、0 重试、4,378 tokens。原模型 3 匹配 / 1 报名说明遗漏；旧应用误丢多行地点后为 2 匹配 / 2 遗漏，修复后同输出离线回放恢复 3 / 1，没有追加模型调用。原报告、先验答案和代理修订分开保留，见[案例与引用定位修复](../chinese-poster-and-evidence-20261019.md)。
 
 10/19 英文第五批：同图 v2 复查，1 次请求、0 重试、3967 tokens。日期 / 时段齐全，原保守计数保持 3 匹配 / 1 标签差异；小字出现，概述未再观察到上批主办推断。已生成未改写模型阅读文件和本地 18 文件复查包，含全部五次历史与空白接收者表，均不等于真人测试。见[观察、核验及泛化限制](../v2-recheck-20261019.md)。
 
@@ -26,7 +28,7 @@
 npm.cmd run evaluate
 ```
 
-输入为 `tests/fixtures/poster-cases.mjs` 中开发者原创的 8 组合成文本与独立预期四字段：完整、缺报名方式、缺年份、二维码目的未知、相对日期、材料中的诱导指令、无可读文字、正文注意事项。二维码是文字占位，不含真实二维码或外部地址；“正文注意事项”不是经过视觉质量验证的小字/噪声样本。
+输入为 `tests/fixtures/poster-cases.mjs` 中开发者原创的 10 组合成文本与预期四字段：原八组保留，新增报名指引已知、无标签二维码两组。原 `qr-unknown` 混用了指引与目标，保留原答案只供离线复查，不能进入新版 live。报告记录评估集版本 `poster-fields-v2-registration-instruction`。二维码均为文字占位，不含真实二维码或外部地址；“正文注意事项”不是经过视觉质量验证的小字/噪声样本。旧八组结果按原分母保留。
 
 默认使用人工转录标签解析路径，外部请求上限为 0。它验证解析与未知处理，不验证图片识别、防提示注入的真实模型效果或社会价值。报告存入忽略目录 `.local/validation/evaluation/<UTC时间>/report.json`；其中逐字段保存预期、实际与分类，失败样例不会从报告中删除。
 
@@ -56,12 +58,12 @@ npm.cmd run evaluate -- --live --limit=1
 
 ```powershell
 # 离线检查这三个标签解析案例，请求 0 次
-npm.cmd run evaluate -- --cases=qr-unknown,relative-date,instruction-in-image
+npm.cmd run evaluate -- --cases=qr-instruction,qr-unlabeled,instruction-in-image
 # 有持续授权且声明本批上限后，才执行实际视觉请求
-npm.cmd run evaluate -- --live --limit=3 --cases=qr-unknown,relative-date,instruction-in-image
+npm.cmd run evaluate -- --live --limit=3 --cases=qr-instruction,qr-unlabeled,instruction-in-image
 ```
 
-可用 ID 为 `complete`、`missing-registration`、`missing-year`、`qr-unknown`、`relative-date`、`instruction-in-image`、`no-text`、`dense-notes`。`--cases` 只选择预先定义的素材，不能传文件路径；报告记录请求列表与计划顺序。未知、空白、重复 ID 或重复参数在调用前拒绝；live 所选样本数超过 `--limit` 时拒绝，不偷偷截断或提高预算。不指定时保持原默认：离线 8 组，live 按上限选择前三组。离线的 `--limit` 不减少样本范围。
+可用 ID 为 `complete`、`missing-registration`、`missing-year`、`relative-date`、`instruction-in-image`、`no-text`、`dense-notes`、`qr-instruction`、`qr-unlabeled`；`qr-unknown` 仅限离线。`--cases` 只选择预先定义的素材，不能传文件路径；报告记录请求列表与计划顺序。未知、空白、重复 ID 或重复参数在调用前拒绝；live 所选样本数超过 `--limit` 时拒绝，不偷偷截断或提高预算。不指定时离线 10 组，live 按上限选择前三组。离线的 `--limit` 不减少样本范围。
 
 已知字段遗漏现在也在该样本后立即停止并进入人工复核，与错配、未知填值分别计数；不等整批跑完后才报遗漏。定向离线结果仍不是视觉识别或防提示注入的模型证据。
 
