@@ -58,7 +58,7 @@ export interface Task {
   changes: { at: string; field: Field; before: string; after: string; reason: string }[];
   audit?: Audit; review?: { at: string; revision: number; fields: Field[]; contentConfirmed: true };
   feedback?: { at: string; outcome: z.infer<typeof feedbackSchema>['outcome'] };
-  provider?: { name: string; model: string | null; promptVersion: string; requests: number; elapsedMs: number; usage: unknown; timeoutMs?: number; reasoningEffort?: ReasoningEffort | null };
+  provider?: { name: string; model: string | null; promptVersion: string; requests: number; elapsedMs: number; usage: unknown; timeoutMs?: number; reasoningEffort?: ReasoningEffort | null; maxTokens?: number };
   error?: string;
   controller: AbortController;
 }

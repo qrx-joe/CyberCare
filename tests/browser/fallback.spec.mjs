@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { readFile, mkdir } from 'node:fs/promises';
+import { ModelFailure } from '../../dist/provider.js';
 
 async function stoppedLiveTask(page, status) {
   const requests = [];
@@ -16,8 +17,10 @@ async function stoppedLiveTask(page, status) {
     // Only the browser sees the simulated terminal model state.
     const response = await route.fetch({ postData: JSON.stringify({ ...input, mode:'manual', text:'活动名称：合成替代任务' }) });
     const task = await response.json();
+    const error = new ModelFailure({ stage:'output-truncated', httpStatus:200, elapsedMs:100, timeout:false,
+      finishReason:'length', usage:null, timeoutMs:90000, reasoningEffort:null, maxTokens:2500 }).message;
     await route.fulfill({ response, json:{ ...task, status, source:{ ...task.source, mode:'live' },
-      error:status === 'failed' ? '合成模型超时状态；未调用模型。' : undefined,
+      error:status === 'failed' ? error : undefined,
       extraction:undefined, values:undefined, provider:undefined } });
   });
   await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
@@ -33,6 +36,7 @@ async function stoppedLiveTask(page, status) {
 
 test('模型失败后保留本页图片和来源，转人工核对并完成实际导出', async ({ page, context }) => {
   const { id, requests, png } = await stoppedLiveTask(page, 'failed');
+  await expect(page.locator('#error')).toContainText('结果不完整');
   await expect(page.locator('#manual-fallback')).toBeVisible();
   await expect(page.locator('#manual-fallback-help')).toContainText('原到期时间不变');
   await page.setViewportSize({ width:390, height:900 });

@@ -6,7 +6,7 @@ import { fromTranscript, SAMPLE_TEXT } from '../dist/domain.js';
 const env = { STEPFUN_API_KEY: 'dummy-test-only', STEPFUN_BASE_URL: 'https://api.stepfun.com/v1', STEPFUN_MODEL: 'test-model', MODEL_REQUEST_LIMIT: '1' };
 const input = { mode: 'live', permission: true, sourceNote: '原创合成单元测试', image: { name: 'synthetic.png', mime: 'image/png', data: 'fake-unit-input' } };
 
-test('有界等待与显式推理强度进入实际请求，默认仍为 30 秒且不额外指定强度', async () => {
+test('有界等待、输出与显式推理强度进入实际请求，保留原有默认值', async () => {
   const originalFetch = globalThis.fetch, originalTimeout = AbortSignal.timeout;
   const waits = [], payloads = [];
   try {
@@ -15,19 +15,22 @@ test('有界等待与显式推理强度进入实际请求，默认仍为 30 秒�
       payloads.push(JSON.parse(options.body));
       return new Response(JSON.stringify({ choices:[{ message:{ content:JSON.stringify(fromTranscript(SAMPLE_TEXT)) } }] }));
     };
-    const tuned = createProvider({ ...env, STEPFUN_MODEL:'step-5-preview', MODEL_TIMEOUT_MS:'90000', STEPFUN_REASONING_EFFORT:'low' });
+    const tuned = createProvider({ ...env, STEPFUN_MODEL:'step-5-preview', MODEL_TIMEOUT_MS:'90000', MODEL_MAX_TOKENS:'4096', STEPFUN_REASONING_EFFORT:'low' });
     assert.equal(tuned.info().timeoutMs, 90000);
     const result = await tuned.extract(input, new AbortController().signal);
     const baseline = await createProvider(env).extract(input, new AbortController().signal);
     assert.deepEqual(waits, [90000,30000]);
     assert.equal(payloads[0].model, 'step-5-preview');
     assert.equal(payloads[0].reasoning_effort, 'low');
-    assert.equal(payloads[0].max_tokens, 2500);
+    assert.equal(payloads[0].max_tokens, 4096);
+    assert.equal(payloads[1].max_tokens, 2500);
     assert.equal('reasoning_effort' in payloads[1], false);
     assert.equal(result.provider.timeoutMs, 90000);
     assert.equal(result.provider.reasoningEffort, 'low');
+    assert.equal(result.provider.maxTokens, 4096);
     assert.equal(baseline.provider.timeoutMs, 30000);
     assert.equal(baseline.provider.reasoningEffort, null);
+    assert.equal(baseline.provider.maxTokens, 2500);
   } finally { globalThis.fetch = originalFetch; AbortSignal.timeout = originalTimeout; }
 });
 
@@ -36,6 +39,7 @@ test('等待和推理配置错误在外部调用前拒绝，人工路径仍可�
   let requests = 0;
   const settings = [
     ...['0','999','90001','1000.5','Infinity','dummy-private-option'].map(value => ({ MODEL_TIMEOUT_MS:value })),
+    ...['0','255','8193','2500.5','Infinity','dummy-private-option'].map(value => ({ MODEL_MAX_TOKENS:value })),
     { STEPFUN_MODEL:'step-5-preview', STEPFUN_REASONING_EFFORT:'auto' },
     { STEPFUN_MODEL:'test-model', STEPFUN_REASONING_EFFORT:'low' },
   ];
@@ -52,6 +56,28 @@ test('等待和推理配置错误在外部调用前拒绝，人工路径仍可�
       assert.equal(provider.info().requests, 0);
     }
     assert.equal(requests, 0);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('finish_reason 为 length 时，即使 JSON 可解析也拒绝生成不完整草稿', async () => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  try {
+    globalThis.fetch = async () => {
+      requests++;
+      return new Response(JSON.stringify({ choices:[{ message:{ content:JSON.stringify(fromTranscript(SAMPLE_TEXT)) }, finish_reason:'length' }], usage:{ total_tokens:2501 } }));
+    };
+    const provider = createProvider(env);
+    await assert.rejects(() => provider.extract(input, new AbortController().signal), error => {
+      assert.equal(error.diagnostic.stage, 'output-truncated');
+      assert.equal(error.diagnostic.finishReason, 'length');
+      assert.equal(error.diagnostic.maxTokens, 2500);
+      assert.equal(error.diagnostic.usage.total_tokens, 2501);
+      assert.match(error.message, /结果不完整/);
+      assert.match(error.message, /人工转录/); return true;
+    });
+    await assert.rejects(() => provider.extract(input, new AbortController().signal), /预算/);
+    assert.equal(requests, 1);
   } finally { globalThis.fetch = originalFetch; }
 });
 
@@ -121,7 +147,7 @@ test('模型 HTTP 失败保留状态，不泄露上游正文或凭据，不自�
   } finally { globalThis.fetch = originalFetch; }
 });
 
-test('输出 JSON 失败仍记录可得 Token 和截断原因，仅允许数字用量', async () => {
+test('输出截断单列并保留可得 Token，仅允许数字用量而不保存正文', async () => {
   const originalFetch = globalThis.fetch;
   try {
     globalThis.fetch = async () => new Response(JSON.stringify({
@@ -129,7 +155,7 @@ test('输出 JSON 失败仍记录可得 Token 和截断原因，仅允许数字�
       usage: { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120, private_data: 'dummy-test-only', completion_tokens_details: { reasoning_tokens: 5, private_data: 'private poster text' } },
     }));
     await assert.rejects(() => createProvider(env).extract(input, new AbortController().signal), error => {
-      assert.equal(error.diagnostic.stage, 'output-json');
+      assert.equal(error.diagnostic.stage, 'output-truncated');
       assert.equal(error.diagnostic.httpStatus, 200);
       assert.equal(error.diagnostic.finishReason, 'length');
       assert.deepEqual(error.diagnostic.usage, { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120, completion_tokens_details: { reasoning_tokens: 5 } });
@@ -163,6 +189,7 @@ test('区分响应 JSON、提取契约和请求错误，不输出任意异常消
   const originalFetch = globalThis.fetch;
   const cases = [
     { fetch: async () => new Response('private poster text'), stage: 'response-json', httpStatus: 200 },
+    { fetch: async () => new Response(JSON.stringify({ choices:[{ message:{ content:'private poster text {broken' }, finish_reason:'stop' }] })), stage: 'output-json', httpStatus: 200 },
     { fetch: async () => new Response(JSON.stringify({ choices: [{ message: { content: '{}' } }], usage: { total_tokens: -1, prompt_tokens: 'dummy-test-only' } })), stage: 'output-contract', httpStatus: 200 },
     { fetch: async () => { throw new TypeError('dummy-test-only private poster text'); }, stage: 'request', httpStatus: null },
     { fetch: async () => { throw new DOMException('dummy-test-only private poster text', 'TimeoutError'); }, stage: 'request', httpStatus: null, timeout: true },
