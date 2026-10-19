@@ -34,17 +34,21 @@ function retainUntil(deadline: number) {
   expiryTimer = setTimeout(checkExpiry, Math.max(0, expiresAt - Date.now()));
   checkExpiry();
 }
-function clearWorkspace() {
+function clearWorkspace(keepMaterial = false) {
+  const retained = keepMaterial ? { source: source.value, deadline: expiresAt } : null;
   workspaceVersion++; clearTimeout(expiryTimer); expiresAt = 0; task = null; busy = false; dirty = false;
-  image.value = ''; if (imageUrl) URL.revokeObjectURL(imageUrl); imageUrl = undefined;
+  if (!retained) { image.value = ''; if (imageUrl) URL.revokeObjectURL(imageUrl); imageUrl = undefined; }
   transcript.value = ''; source.value = ''; el<HTMLInputElement>('permission').checked = false;
   for (const key of Object.keys(drafts)) delete drafts[key]; pendingCreation = null;
+  if (retained) drafts.manual = { text: '', source: retained.source };
   el('poster-preview').hidden = true;
   for (const id of ['fact-fields', 'original', 'summary', 'uncertainties', 'final-text', 'audit-output', 'task-meta', 'provider-label', 'feedback-status']) el(id).replaceChildren();
   for (const key of ['original', 'summary', 'description']) el<HTMLTextAreaElement>(`content-${key}`).value = '';
   el<HTMLDetailsElement>('content-editor').open = false;
   el<HTMLInputElement>('edit-reason').value = ''; el<HTMLSelectElement>('feedback').value = ''; clearChecks(); render();
-  previousMode = null; mode.value = 'sample'; setupMode(); updateGates();
+  previousMode = null; mode.value = retained ? 'manual' : 'sample'; setupMode(); updateGates();
+  // A fallback preserves the original deadline, rather than starting a new retention period.
+  if (retained) retainUntil(retained.deadline);
 }
 function checkExpiry() {
   if (!expiresAt || Date.now() < expiresAt) return;
@@ -116,6 +120,7 @@ function updateGates() {
   el<HTMLButtonElement>('audit').disabled = busy || dirty;
   el<HTMLButtonElement>('save').disabled = busy || !dirty;
   el<HTMLButtonElement>('create').disabled = busy || !!task;
+  el<HTMLButtonElement>('use-manual').disabled = busy;
 }
 async function action(work: () => Promise<void>) {
   checkExpiry();
@@ -166,6 +171,8 @@ function render() {
   el('draft').hidden = task?.status !== 'needs_review';
   el('completed').hidden = task?.status !== 'completed';
   el('cancel').hidden = task?.status !== 'processing';
+  const canUseManual = task?.source.mode === 'live' && ['failed', 'cancelled'].includes(task.status);
+  el('manual-fallback').hidden = !canUseManual;
   // Progress reflects the existing task state; it never bypasses review gates.
   const step = task?.status === 'completed' ? 'export' : task?.status === 'needs_review' ? 'review' : 'input';
   for (const name of ['input', 'review', 'export']) {
@@ -178,8 +185,8 @@ function render() {
   if (!task) return;
   const states = { processing: '正在处理', needs_review: '等待核对', completed: '已确认', failed: '处理失败', cancelled: '已取消' };
   el('task-meta').textContent = `任务 ${task.id} · 版本 ${task.revision} · ${states[task.status]} · ${new Date(task.expiresAt).toLocaleString('zh-CN')} 到期`;
-  if (task.status === 'failed') { error(task.error); notice('任务失败；可删除后重新提交。'); }
-  if (task.status === 'cancelled') notice('任务已取消；已发出的第三方请求可能仍计费。可删除当前任务后重新开始。');
+  if (task.status === 'failed') { error(task.error); notice(canUseManual ? '识别未完成。可以保留本页图片和来源，改用人工转录。' : '任务失败；可删除后重新提交。'); }
+  if (task.status === 'cancelled') notice(canUseManual ? '识别已取消，可保留本页材料改用人工转录；已发出的第三方请求可能仍计费。' : '任务已取消；已发出的第三方请求可能仍计费。可删除当前任务后重新开始。');
   if (!task.extraction || !task.values) return;
   el('provider-label').textContent = `${task.provider?.name} · ${task.provider?.elapsedMs} ms · 本任务外部请求 ${task.provider?.requests} 次`;
   el('original').textContent = task.extraction.original;
@@ -281,6 +288,12 @@ el('review-form').addEventListener('submit', event => {
   });
 });
 el('cancel').addEventListener('click', () => void action(async () => { if (task) { task = await api<PublicTask>(`/tasks/${task.id}/cancel`, 'POST', {}); render(); } }));
+el('use-manual').addEventListener('click', () => void action(async () => {
+  if (!task || task.source.mode !== 'live' || !['failed', 'cancelled'].includes(task.status)) return;
+  await api(`/tasks/${task.id}`, 'DELETE'); clearWorkspace(true);
+  notice('已转为人工转录。请粘贴文字并重新确认材料使用权；图片只作对照，不再调用模型，原到期时间不变。');
+  transcript.focus();
+}));
 el('delete').addEventListener('click', () => void action(async () => {
   if (!task) return;
   await api(`/tasks/${task.id}`, 'DELETE'); clearWorkspace();

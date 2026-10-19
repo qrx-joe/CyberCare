@@ -67,6 +67,7 @@
     <section class="panel result-panel" aria-labelledby="result-title"><p class="panel-label">REVIEW / 对照、修订与确认</p><div class="panel-heading"><h2 id="result-title" tabindex="-1">核对与回执</h2></div>
       <div id="empty"><span class="empty-symbol" aria-hidden="true">Aa</span><h3>让信息从图片里走出来</h3><p>先生成草稿，再逐项核对。<br>未知信息可以保留，不需要猜一个答案。</p><p class="muted">自动检测通过 ≠ 事实准确<br>人工确认 ≠ 用户验证或机构采用</p></div>
       <div id="task-controls" hidden><p id="task-meta" class="muted"></p><div class="actions"><button id="cancel" type="button" hidden>取消处理</button><button id="delete" type="button">删除当前任务</button></div></div>
+      <div id="manual-fallback" class="callout" hidden><h3>识别没完成，也可以继续</h3><p id="manual-fallback-help">删除本次失败或已取消的任务，保留本页图片和来源供你转录。不再调用模型，本页材料原到期时间不变；已发出的请求可能仍计费。</p><button id="use-manual" type="button" aria-describedby="manual-fallback-help">保留图片，改用人工转录</button></div>
       <div id="draft" hidden>
         <p id="provider-label" class="callout"></p>
         <details><summary>查看原始转录、整理内容与不确定项</summary><h3>原始转录（可能有识别错误）</h3><pre id="original"></pre><h3>初次提取概述 / 图像说明（保留用于对照）</h3><p id="summary"></p><ul id="uncertainties"></ul></details>
