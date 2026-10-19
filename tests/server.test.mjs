@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer } from 'node:net';
-import { mkdir, mkdtemp, writeFile, rm, rmdir } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { mkdir, mkdtemp, writeFile, rm, rmdir, cp } from 'node:fs/promises';
+import { resolve, sep } from 'node:path';
 
 test('旧会话创建的新任务保留完整有效期，任务自身仍按 30 分钟到期', { timeout: 15000 }, async () => {
   await mkdir('.local/validation', { recursive: true });
@@ -41,5 +41,70 @@ test('旧会话创建的新任务保留完整有效期，任务自身仍按 30 �
   } finally {
     if (processUnderTest.exitCode === null && processUnderTest.signalCode === null) { processUnderTest.kill(); await once(processUnderTest, 'exit'); }
     await rm(clock, { force: true }); await rmdir(directory);
+  }
+});
+
+test('运行版本固定在启动构建；磁盘更新、缺失或损坏均不能冒充已加载的新版本', { timeout:15000 }, async () => {
+  const validation = resolve('.local/validation');
+  await mkdir(validation,{recursive:true});
+  const directory = await mkdtemp(resolve(validation,'runtime-build-'));
+  await cp(resolve('dist'),resolve(directory,'dist'),{recursive:true,filter:path=>!path.startsWith(resolve('dist/web'))});
+  const manifest = resolve(directory,'dist/build-info.json');
+  const first = {sourceCommit:'a'.repeat(40),sourceDirty:false,builtAt:'2026-10-20T00:00:00.000Z',localMediaIncluded:false};
+  // A rebuild of uncommitted code can retain the same commit; compare the build too.
+  const next = {...first,builtAt:'2026-10-20T00:01:00.000Z'};
+  await writeFile(manifest,JSON.stringify(first));
+  const reservation = createServer(); reservation.listen(0,'127.0.0.1'); await once(reservation,'listening');
+  const port = reservation.address().port; await new Promise(resolve=>reservation.close(resolve));
+  const origin = `http://127.0.0.1:${port}`;
+  const env = {...process.env,PORT:String(port),MODEL_REQUEST_LIMIT:'0'};
+  for (const key of Object.keys(env)) if (/^(STEPFUN_|CYBERCARE_|NODE_OPTIONS$)/.test(key)) delete env[key];
+  let child;
+  const start = async () => {
+    child = spawn(process.execPath,[resolve(directory,'dist/server.js')],{env,windowsHide:true,stdio:['ignore','pipe','pipe']});
+    let logs = ''; child.stdout.on('data',data=>{logs+=data;}); child.stderr.on('data',data=>{logs+=data;});
+    const until = Date.now()+5000;
+    while (!logs.includes('CyberCare local demo')) {
+      assert.equal(child.exitCode,null,logs); assert.ok(Date.now()<until,logs);
+      await new Promise(resolve=>setTimeout(resolve,20));
+    }
+  };
+  const stop = async () => {
+    if (child && child.exitCode===null && child.signalCode===null) { const ended=once(child,'exit'); child.kill(); await ended; }
+  };
+  const health = async () => {
+    const response = await fetch(`${origin}/api/health`);
+    assert.equal(response.status,200);
+    return response.json();
+  };
+  try {
+    await start();
+    assert.deepEqual((await health()).build,first);
+    await writeFile(manifest,JSON.stringify(next));
+    const changed = await health();
+    assert.deepEqual(changed.build,first);
+    assert.deepEqual(changed.availableBuild,next);
+    assert.equal(changed.restartRequired,true);
+    const config = await (await fetch(`${origin}/api/config`)).json();
+    assert.deepEqual(config.runtime,changed);
+    assert.equal(config.provider.requests,0);
+    await writeFile(manifest,'{"secret":"must-not-be-returned"}');
+    const invalid = await health();
+    assert.deepEqual(invalid.build,first); assert.equal(invalid.availableBuild,null); assert.equal(invalid.restartRequired,null);
+    assert.ok(!JSON.stringify(invalid).includes('must-not-be-returned'));
+    await rm(manifest);
+    assert.equal((await health()).restartRequired,null);
+    await writeFile(manifest,JSON.stringify(next));
+    await stop(); await start();
+    const restarted = await health();
+    assert.deepEqual(restarted.build,next); assert.equal(restarted.restartRequired,false);
+    await stop(); await rm(manifest); await start();
+    const unknown = await health();
+    assert.equal(unknown.build,null); assert.equal(unknown.restartRequired,null);
+    assert.equal((await fetch(`${origin}/api/config`)).status,200);
+  } finally {
+    await stop();
+    assert.ok(directory.startsWith(validation+sep));
+    await rm(directory,{recursive:true,force:true});
   }
 });

@@ -17,6 +17,20 @@ const cookiePath = process.env.CYBERCARE_BASE_PATH || '/';
 if (!/^\/(?:[a-z0-9-]+\/)*$/.test(cookiePath)) throw new Error('CYBERCARE_BASE_PATH must be an absolute directory path.');
 const allowedHosts = [`127.0.0.1:${port}`, `localhost:${port}`, ...(publicOrigin ? [publicOrigin.host] : [])];
 const allowedOrigins = new Set([`http://127.0.0.1:${port}`, `http://localhost:${port}`, ...(publicOrigin ? [publicOrigin.origin] : [])]);
+const buildSchema = z.object({ sourceCommit:z.string().regex(/^[a-f0-9]{40}$/).nullable(), sourceDirty:z.boolean().nullable(), builtAt:z.string().datetime(), localMediaIncluded:z.boolean() });
+async function readBuild() {
+  try {
+    const parsed = buildSchema.safeParse(JSON.parse(await readFile(new URL('build-info.json', import.meta.url), 'utf8')));
+    return parsed.success ? parsed.data : null;
+  } catch { return null; }
+}
+// A rebuild replaces files, not modules already loaded by this process.
+const runningBuild = await readBuild();
+const startedAt = new Date().toISOString();
+async function runtimeInfo() {
+  const availableBuild = await readBuild();
+  return { status:'ok', startedAt, build:runningBuild, availableBuild, restartRequired:runningBuild && availableBuild ? JSON.stringify(runningBuild) !== JSON.stringify(availableBuild) : null };
+}
 const provider = createProvider();
 const service = createTaskService(provider);
 const auditor = createAuditor();
@@ -63,8 +77,7 @@ export const server = createServer(async (req, res) => {
     if (url.pathname.startsWith('/api/')) {
       if (!['GET', 'HEAD'].includes(method) && (req.headers['x-cybercare'] !== '1' || (req.headers.origin && !allowedOrigins.has(req.headers.origin)))) throw new AppError(403, 'ORIGIN_REJECTED', '请求来源不允许。');
       if (method === 'GET' && url.pathname === '/api/health') {
-        const build = JSON.parse(await readFile(new URL('build-info.json', import.meta.url), 'utf8'));
-        return json(res, 200, { status: 'ok', build });
+        return json(res, 200, await runtimeInfo());
       }
       let token = req.headers.cookie?.split(';').map(v => v.trim()).find(v => v.startsWith('cybercare='))?.slice(10);
       if (!token || !sessions.has(token) || sessions.get(token)! <= Date.now()) {
@@ -75,7 +88,7 @@ export const server = createServer(async (req, res) => {
       // Each task still expires independently after 30 minutes.
       sessions.set(token, Date.now() + 30 * 60 * 1000);
       res.setHeader('Set-Cookie', `cybercare=${token}; HttpOnly; SameSite=Strict; Path=${cookiePath}; Max-Age=1800${publicOrigin && req.headers.host === publicOrigin.host ? '; Secure' : ''}`);
-      if (method === 'GET' && url.pathname === '/api/config') return json(res, 200, { fields: FIELDS, sampleText: SAMPLE_TEXT, provider: provider.info(), imageLimitMb: 2, ttlMinutes: 30, contentEditing: true });
+      if (method === 'GET' && url.pathname === '/api/config') return json(res, 200, { fields: FIELDS, sampleText: SAMPLE_TEXT, provider: provider.info(), imageLimitMb: 2, ttlMinutes: 30, contentEditing: true, runtime:await runtimeInfo() });
       if (method === 'POST' && url.pathname === '/api/tasks') {
         const key = req.headers['idempotency-key'];
         if (typeof key !== 'string' || !/^[a-zA-Z0-9-]{8,80}$/.test(key)) throw new AppError(400, 'KEY_REQUIRED', '缺少有效请求编号。');

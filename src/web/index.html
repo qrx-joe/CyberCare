@@ -50,6 +50,7 @@
     </div>
   </details>
   <p id="notice" role="status" aria-live="polite">正在读取本地配置…</p><p id="error" role="alert" hidden></p>
+  <aside id="runtime-warning" class="callout" hidden aria-labelledby="runtime-title"><h3 id="runtime-title">本地演示版本需要核对</h3><p id="runtime-message" role="status" aria-live="polite"></p><details><summary>如何更新本地演示</summary><p>先导出需要保留的结果，另存尚未提交的文字。重启会清空服务内存中的任务。在启动演示的终端按 Ctrl+C 停止旧服务，然后运行 <code>npm.cmd run dev</code>。启动后打开终端显示的本地地址。</p></details><button id="check-runtime" type="button">重新核对版本</button></aside>
   <div class="layout">
     <section class="panel" aria-labelledby="input-title"><p class="panel-label">INPUT / 原始材料</p><div class="panel-heading"><h2 id="input-title" tabindex="-1">提交一张海报</h2></div>
       <form id="input-form">

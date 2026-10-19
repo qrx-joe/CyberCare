@@ -63,6 +63,13 @@ for (const input of [transcript, source]) input.addEventListener('input', () => 
 
 function notice(message: string) { el('notice').textContent = message; }
 function error(message = '') { el('error').textContent = message; el('error').hidden = !message; }
+function showRuntimeWarning(runtime?: { restartRequired:boolean | null }) {
+  el('runtime-warning').hidden = runtime?.restartRequired === false;
+  el('runtime-title').textContent = runtime?.restartRequired === true ? '本地演示有更新待加载' : '本地演示版本尚未核对';
+  el('runtime-message').textContent = runtime?.restartRequired === true
+    ? '构建文件已更新，当前服务仍使用启动时的版本。先保存所需结果，再重启本地服务并刷新页面。'
+    : '服务没有提供可核对的版本记录，暂不能确认页面与服务端版本一致。可以先保存资料，再按下方步骤更新演示。';
+}
 // Presentation guidance only: it never fills facts or changes their evidence.
 function fieldGuidance(key: Field, value: string) {
   const missing: Record<Field, string> = {
@@ -344,9 +351,18 @@ el('large').addEventListener('click', () => { const active = document.documentEl
 window.addEventListener('resize', fitFactEditors);
 const factResizeObserver = new ResizeObserver(fitFactEditors);
 factResizeObserver.observe(el('fact-fields'));
+el('check-runtime').addEventListener('click', async () => {
+  const button = el<HTMLButtonElement>('check-runtime'); button.disabled = true;
+  try {
+    const response = await fetch(apiUrl('/health'));
+    showRuntimeWarning(response.ok ? await response.json() : undefined);
+  } catch { showRuntimeWarning(); }
+  finally { button.disabled = false; }
+});
 async function init() {
   try {
-    const config = await api<{ fields: Record<Field, string>; sampleText: string; provider: { live: boolean; limit: number; timeoutMs?: number | null; configError?: string | null }; contentEditing?: boolean }>('/config'); fields = config.fields; sampleText = config.sampleText;
+    const config = await api<{ fields: Record<Field, string>; sampleText: string; provider: { live: boolean; limit: number; timeoutMs?: number | null; configError?: string | null }; contentEditing?: boolean; runtime?: { restartRequired:boolean | null } }>('/config'); fields = config.fields; sampleText = config.sampleText;
+    showRuntimeWarning(config.runtime);
     modelTimeoutSeconds = Math.ceil((config.provider.timeoutMs ?? 30000) / 1000);
     contentEditing = config.contentEditing === true;
     el('content-editor').hidden = !contentEditing;
