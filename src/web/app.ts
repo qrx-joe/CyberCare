@@ -221,9 +221,16 @@ function render() {
     const wrap = document.createElement('div');
     const l = document.createElement('label'); l.htmlFor = `fact-${key}`; l.textContent = label;
     const input = document.createElement('textarea'); input.rows = 2; input.id = `fact-${key}`; input.maxLength = 500; input.value = task.values[key]; input.placeholder = '未知；留空可明确确认未知'; input.setAttribute('aria-describedby', `evidence-${key} guidance-${key}`);
-    const evidence = document.createElement('small'); evidence.id = `evidence-${key}`; evidence.textContent = `提取依据：${task.extraction.facts[key].evidence || '无可定位文字；请核实或保留未知'}${task.changes.some(c => c.field === key) ? '（此字段有人工修订，见证据 JSON）' : ''}`;
+    const quote = task.extraction.facts[key].evidence;
+    const unlocatedQuote = !!quote.trim() && !task.extraction.original.includes(quote);
+    const evidence = document.createElement('small'); evidence.id = `evidence-${key}`; evidence.textContent = `${unlocatedQuote ? '待核实的识别片段' : '提取依据'}：${quote || '无可定位文字；请核实或保留未知'}${task.changes.some(c => c.field === key) ? '（此字段有人工修订，见证据 JSON）' : ''}`;
     const guidance = document.createElement('p'); guidance.id = `guidance-${key}`; guidance.className = 'fact-guidance';
-    const updateGuidance = () => { guidance.textContent = fieldGuidance(key, input.value); guidance.hidden = !guidance.textContent; };
+    const updateGuidance = () => {
+      guidance.textContent = unlocatedQuote && !input.value.trim()
+        ? '当前转录中未找到这段文字的完整对应，字段暂时留空。请对照原图核实后填写，也可以保留未知。'
+        : fieldGuidance(key, input.value);
+      guidance.hidden = !guidance.textContent;
+    };
     updateGuidance();
     input.addEventListener('input', () => { updateGuidance(); fitFactEditors(); dirty = true; clearChecks(); updateGates(); });
     wrap.append(l, input, evidence, guidance); container.append(wrap);
