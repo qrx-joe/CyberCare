@@ -63,6 +63,9 @@ export function confirmTask(task: Task, revision: number) {
 // A recipient keeps the current date caution even after leaving the review UI.
 function dateReviewNote(task: Task): string {
   const time = task.values?.time.trim();
+  if (time && /今天|明天|后天|今晚|明晚|本周|这周|下周|本月|下月/.test(time)) {
+    return '相对日期待核实：活动时间含相对表述，请向活动方确认具体日期及其参照日期；不要按阅读当天推算。';
+  }
   return time && !/(?:19|20)\d{2}/.test(time)
     ? '年份待核实：活动时间未识别到完整年份。请向活动方确认完整日期后再安排行程；不要按阅读当天推算或自行补全年份。' : '';
 }

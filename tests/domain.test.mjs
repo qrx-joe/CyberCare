@@ -38,6 +38,24 @@ test('导出提醒接收者核实缺少年份的日期；核实补充后移除�
     assert.notEqual(hash(renderHtml(t)), hash(html));
   } finally { service.close(); }
 });
+
+test('相对日期即使包含年份也须提醒，原文保留且不按阅读日期换算', async () => {
+  const service = createTaskService();
+  try {
+    for (const time of ['明天 14:00', '2026 年 10 月，明天 14:00', '2026 年 10 月，下周六 14:00']) {
+      const t = service.create({ mode:'manual', permission:true, sourceNote:'开发者原创合成相对日期测试',
+        text:`活动名称：合成阅读会\n活动时间：${time}\n活动地点：示例活动室\n报名方式：现场登记` }, 'one', time);
+      await tick();
+      assert.equal(t.values.time, time);
+      assert.ok(renderText(t).includes('相对日期待核实'));
+      assert.ok(renderHtml(t).includes('相对日期待核实'));
+      const before = structuredClone(t.extraction);
+      editTask(t, 1, { ...t.values, time:'2026 年 10 月 24 日 14:00' }, '对照合成独立答案核实日期');
+      assert.ok(!renderText(t).includes('相对日期待核实'));
+      assert.deepEqual(t.extraction, before);
+    }
+  } finally { service.close(); }
+});
 test('未逐项确认和无授权输入拒绝', () => {
   assert.equal(inputSchema.safeParse({ ...input, permission: false }).success, false);
   assert.equal(reviewSchema.safeParse({ revision: 1, confirmed: {}, contentConfirmed: true }).success, false);

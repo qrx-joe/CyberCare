@@ -2,6 +2,32 @@ import { test, expect } from '@playwright/test';
 import { hash } from '../../dist/domain.js';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
+test('含年份的相对日期仍在核对页和实际导出中提醒，保留材料原文', async ({ page, context }) => {
+  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.locator('#mode').selectOption('manual');
+  const time = '2026 年 10 月，明天 14:00';
+  await page.locator('#transcript').fill(`活动名称：合成相对日期核对\n活动时间：${time}\n活动地点：示例活动室\n报名方式：现场登记`);
+  await page.locator('#source-note').fill('开发者原创合成边界，不是真实活动');
+  await page.locator('#permission').check(); await page.locator('#create').click();
+  await expect(page.locator('#draft')).toBeVisible();
+  await expect(page.locator('#guidance-time')).toBeVisible();
+  await expect(page.locator('#guidance-time')).toContainText('相对日期');
+  await expect(page.locator('#fact-time')).toHaveValue(time);
+  await page.locator('#audit').click(); await expect(page.locator('#audit-output')).toContainText('Critical 0 / Serious 0');
+  for (const key of ['title','time','location','registration']) await page.locator(`#checked-${key}`).check();
+  await page.locator('#confirm-content').check(); await page.locator('#confirm').click();
+  await expect(page.locator('#final-text')).toContainText('相对日期待核实');
+  const id = (await page.locator('#task-meta').textContent()).match(/[a-f0-9-]{36}/)[0];
+  const receipt = await (await context.request.get(`/api/tasks/${id}/receipt`)).json();
+  const waiting = page.waitForEvent('download'); await page.locator('#export-html').click();
+  const html = await readFile(await (await waiting).path(), 'utf8');
+  expect(html).toContain('相对日期待核实');
+  expect(html).toContain('不要按阅读当天推算');
+  expect(hash(html)).toBe(receipt.audit.htmlHash);
+  expect(receipt.values.time).toBe(time);
+  await page.locator('#delete').click();
+});
+
 test('缺年份提醒进入实际文字和 HTML 下载；检测哈希仍对应同一份文件', async ({ page, context }) => {
   await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#mode').selectOption('manual');

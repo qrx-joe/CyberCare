@@ -67,6 +67,9 @@ function fieldGuidance(key: Field, value: string) {
     registration: '请向活动方询问报名入口、报名方式和截止时间；没有可靠信息可以留空，确认保留未知。',
   };
   if (!value.trim()) return missing[key];
+  if (key === 'time' && /今天|明天|后天|今晚|明晚|本周|这周|下周|本月|下月/.test(value)) {
+    return '活动时间含相对日期。请向活动方确认具体日期及其参照日期；即使有年份，也不要按阅读当天推算。';
+  }
   return key === 'time' && !/(?:19|20)\d{2}/.test(value)
     ? '请对照原图核实年份、具体日期和时段；不要把“今天”或“明天”自行换算成日期。' : '';
 }
