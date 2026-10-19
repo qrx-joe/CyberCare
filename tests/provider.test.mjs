@@ -28,6 +28,8 @@ test('有界等待、输出与显式推理强度进入实际请求，保留原�
     assert.equal(result.provider.timeoutMs, 90000);
     assert.equal(result.provider.reasoningEffort, 'low');
     assert.equal(result.provider.maxTokens, 4096);
+    assert.equal(result.provider.promptVersion, 'poster-extract-v2');
+    assert.equal(result.provider.promptVersion, tuned.info().promptVersion);
     assert.equal(baseline.provider.timeoutMs, 30000);
     assert.equal(baseline.provider.reasoningEffort, null);
     assert.equal(baseline.provider.maxTokens, 2500);
