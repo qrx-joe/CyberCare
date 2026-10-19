@@ -98,6 +98,25 @@ export function renderText(task: Task): string {
 }
 /** One controlled template is both audited and exported, with all content escaped. */
 export function renderHtml(task: Task): string {
+  const e = task.extraction!;
+  const content = task.reviewedContent ?? e;
   const dateNote = dateReviewNote(task);
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>海报文字版</title><style>body{font:1.25rem/1.8 system-ui,sans-serif;color:#17221c;background:#fafbf6;max-width:48rem;margin:2rem auto;padding:1rem;overflow-wrap:anywhere}h1{font-size:2rem}pre{font:inherit;white-space:pre-wrap}dt{font-weight:700}dd{margin:0 0 1rem}</style></head><body><main><h1>海报文字版</h1><dl>${fieldKeys.map(k => `<dt>${FIELDS[k]}</dt><dd>${escapeHtml(task.values![k] || '未知，请向活动方核实')}</dd>`).join('')}</dl>${dateNote ? `<p><strong>${escapeHtml(dateNote)}</strong></p>` : ''}<h2>完整文字与来源</h2><pre>${escapeHtml(renderText(task))}</pre></main></body></html>`;
+  const sections = [['facts', '活动信息'], ['summary', '内容概述'], ['description', '图像说明'], ['full-text', '完整文字'], ['uncertainties', '提取时的不确定项'], ['source', '来源与处理说明']] as const;
+  const mode = { sample: '内置合成样例，非 AI 识别', manual: '人工转录，非 AI 识别', live: 'AI 提取，需操作者核对' }[task.source.mode];
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(task.values!.title || '活动名称未知')} · 海报文字版</title><style>
+body{font:1.25rem/1.8 system-ui,sans-serif;color:#17221c;background:#fafbf6;max-width:48rem;margin:2rem auto;padding:1rem;overflow-wrap:anywhere}
+h1{font-size:2rem}h2{font-size:1.5rem}h1,h2{line-height:1.4}pre{font:inherit;white-space:pre-wrap}dt{font-weight:700}dd{margin:0 0 1rem}
+a{color:#294d34;text-underline-offset:.2em}:focus-visible{outline:3px solid #294d34;outline-offset:4px}[tabindex="-1"]{scroll-margin-top:1rem}
+nav{border-block:1px solid #bac5b9;margin:1.5rem 0;padding:.5rem 0}nav ul{display:flex;flex-wrap:wrap;gap:.25rem 1rem;list-style:none;padding:0}nav li{max-width:100%}nav a{display:block;min-height:44px;padding:.25rem .5rem}
+.caution{border-left:4px solid #496644;padding:.5rem 1rem;background:#edf2e6}section{margin-block:2rem}footer{border-top:1px solid #bac5b9;padding-top:1rem}
+@media print{nav{display:none}body{margin:0;max-width:none;color:#000;background:#fff}}
+</style></head><body><main><h1>海报文字版</h1>
+<nav aria-label="阅读目录"><p>跳到你需要的内容</p><ul>${sections.map(([id, label]) => `<li><a href="#${id}">${label}</a></li>`).join('')}</ul></nav>
+<section><h2 id="facts" tabindex="-1">活动信息</h2><dl>${fieldKeys.map(k => `<dt>${FIELDS[k]}</dt><dd>${escapeHtml(task.values![k] || '未知，请向活动方核实')}</dd>`).join('')}</dl>${dateNote ? `<p id="date-review" class="caution"><strong>${escapeHtml(dateNote)}</strong></p>` : ''}</section>
+<section><h2 id="summary" tabindex="-1">内容概述</h2><pre>${escapeHtml(content.summary || '未提供概述。')}</pre></section>
+<section><h2 id="description" tabindex="-1">图像说明</h2><pre>${escapeHtml(content.description || '未提供图像说明。')}</pre></section>
+<section><h2 id="full-text" tabindex="-1">完整文字</h2><pre>${escapeHtml(content.original)}</pre></section>
+<section><h2 id="uncertainties" tabindex="-1">提取时的不确定项</h2><p>以下保留初次提取时的标记。当前内容可能已经修订，修订依据另见证据 JSON。</p><ul>${e.uncertainties.length ? e.uncertainties.map(text => `<li>${escapeHtml(text)}</li>`).join('') : '<li>无额外标记；仍需人工核对。</li>'}</ul></section>
+<section><h2 id="source" tabindex="-1">来源与处理说明</h2><p>来源：${escapeHtml(task.source.note)}</p><p>处理路径：${mode}</p><p>原始提取与人工修订依据保存在证据 JSON 中；四项信息与完整文字需分别核对。未知信息请向活动方核实。</p></section>
+</main><footer><p>本文件不代表 WCAG 认证、真实用户验证或机构采用。</p></footer></body></html>`;
 }

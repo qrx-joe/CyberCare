@@ -51,7 +51,7 @@ test('缺年份提醒进入实际文字和 HTML 下载；检测哈希仍对应�
   }
   expect(hash(files.html)).toBe(receipt.audit.htmlHash);
   const recipient = await context.newPage(); await recipient.setContent(files.html);
-  await expect(recipient.locator('main > p')).toContainText('不要按阅读当天推算');
+  await expect(recipient.locator('#date-review')).toContainText('不要按阅读当天推算');
   const directory = '.local/validation/recipient-date-20261019';
   await mkdir(directory, { recursive:true });
   await writeFile(`${directory}/result.html`, files.html);

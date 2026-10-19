@@ -27,7 +27,7 @@ test('导出提醒接收者核实缺少年份的日期；核实补充后移除�
     const html = renderHtml(t);
     assert.ok(renderText(t).includes('年份待核实'));
     assert.ok(html.includes('年份待核实'));
-    assert.ok(html.indexOf('年份待核实') < html.indexOf('<h2>完整文字与来源'));
+    assert.ok(html.indexOf('年份待核实') < html.indexOf('<h2 id="summary"'));
     assert.equal(t.values.time, '10 月 24 日 14:00—16:00');
     t.audit = { revision:1, htmlHash:hash(html), at:'test', engine:'test stub', violations:[], incomplete:[], passes:0 };
     editTask(t, 1, { ...t.values, time:'2026 年 10 月 24 日 14:00—16:00' }, '合成测试：对照独立答案核实年份');
