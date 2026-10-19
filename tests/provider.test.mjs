@@ -28,8 +28,11 @@ test('有界等待、输出与显式推理强度进入实际请求，保留原�
     assert.equal(result.provider.timeoutMs, 90000);
     assert.equal(result.provider.reasoningEffort, 'low');
     assert.equal(result.provider.maxTokens, 4096);
-    assert.equal(result.provider.promptVersion, 'poster-extract-v2');
+    assert.equal(result.provider.promptVersion, 'poster-extract-v3');
     assert.equal(result.provider.promptVersion, tuned.info().promptVersion);
+    assert.match(payloads[0].messages[0].content, /不因二维码目标未知而置空/);
+    assert.match(payloads[0].messages[0].content, /在 uncertainties 另写二维码目标或报名入口未知/);
+    assert.match(payloads[0].messages[0].content, /只有无标签的二维码、缺少报名关联或文字无法辨认时，registration 为 null/);
     assert.equal(baseline.provider.timeoutMs, 30000);
     assert.equal(baseline.provider.reasoningEffort, null);
     assert.equal(baseline.provider.maxTokens, 2500);

@@ -2,7 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createProvider, ModelFailure } from '../dist/provider.js';
 import { chromePath } from '../dist/audit.js';
-import { posterCases } from '../tests/fixtures/poster-cases.mjs';
+import { posterCases, evaluationSuiteVersion } from '../tests/fixtures/poster-cases.mjs';
 import { scoreFacts, requiresReview } from './evaluation-score.mjs';
 import { evaluationPlan } from './evaluation-plan.mjs';
 
@@ -11,7 +11,7 @@ const directory = resolve('.local/validation/evaluation', new Date().toISOString
 await mkdir(directory, { recursive: true });
 const provider = createProvider({ ...process.env, MODEL_REQUEST_LIMIT: String(live ? limit : 0) });
 const report = {
-  createdAt: new Date().toISOString(), mode: live ? 'live-synthetic-vision' : 'offline-label-parser',
+  createdAt: new Date().toISOString(), evaluationSuiteVersion, mode: live ? 'live-synthetic-vision' : 'offline-label-parser',
   material: '开发者原创合成材料；不是授权真实海报或目标用户测试',
   scope: '四字段保守文字匹配；不是全文正确率、完整无障碍评估、用户效果或社会影响',
   requestLimit: live ? limit : 0, actualRequests: 0, retries: 0,

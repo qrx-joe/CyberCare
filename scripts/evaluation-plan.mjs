@@ -19,5 +19,6 @@ export function evaluationPlan(args, cases) {
   const samples = requestedCaseIds ? requestedCaseIds.map(id => byId.get(id)) : live ? cases.slice(0, limit) : cases;
   if (!samples.length) throw new Error('没有待评估样本；未开始评估。');
   if (live && samples.length > limit) throw new Error('所选样本数超过本批请求上限；不会截断样本或扩大预算。');
+  if (live && samples.some(sample => sample.liveEligible === false)) throw new Error('所选样本含已停用的旧评估口径；qr-unknown 仅供离线复查，新视觉评估请选择 qr-instruction 或 qr-unlabeled。');
   return { live, limit, samples, requestedCaseIds };
 }
