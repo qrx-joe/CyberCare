@@ -78,6 +78,13 @@ function fieldGuidance(key: Field, value: string) {
   return key === 'time' && !/(?:19|20)\d{2}/.test(value)
     ? '请对照原图核实年份、具体日期和时段；不要把“今天”或“明天”自行换算成日期。' : '';
 }
+function fitFactEditors() {
+  for (const input of el('fact-fields').querySelectorAll('textarea')) {
+    if (!input.getClientRects().length) continue;
+    input.style.height = 'auto';
+    input.style.height = `${input.scrollHeight + input.offsetHeight - input.clientHeight}px`;
+  }
+}
 function renderSamplePreview() {
   // Use the existing synthetic transcript; this is not a task or an export.
   const lines = sampleText.split(/\r?\n/);
@@ -209,9 +216,10 @@ function render() {
     const guidance = document.createElement('p'); guidance.id = `guidance-${key}`; guidance.className = 'fact-guidance';
     const updateGuidance = () => { guidance.textContent = fieldGuidance(key, input.value); guidance.hidden = !guidance.textContent; };
     updateGuidance();
-    input.addEventListener('input', () => { updateGuidance(); dirty = true; clearChecks(); updateGates(); });
+    input.addEventListener('input', () => { updateGuidance(); fitFactEditors(); dirty = true; clearChecks(); updateGates(); });
     wrap.append(l, input, evidence, guidance); container.append(wrap);
   }
+  fitFactEditors();
   dirty = false; clearChecks();
   const audit = task.audit;
   el('audit-output').textContent = audit ? `${audit.engine} · 版本 ${audit.revision}\nCritical ${audit.violations.filter(v => v.impact === 'critical').length} / Serious ${audit.violations.filter(v => v.impact === 'serious').length} / 全部规则问题 ${audit.violations.length}\n需人工检查 ${audit.incomplete.length} 项；通过规则 ${audit.passes}\n${audit.violations.map(v => `${v.id}：${v.help}`).join('\n')}${audit.incomplete.map(v => `\n人工复核 ${v.id}：${v.help}`).join('')}\n检测仅覆盖自动规则，不代表完整 WCAG 符合性。` : '尚未检测当前版本；修改后需要重新检测。';
@@ -332,7 +340,10 @@ el('send-feedback').addEventListener('click', () => void action(async () => {
   if (!outcome) throw new Error('请先选择反馈。');
   task = await api<PublicTask>(`/tasks/${task.id}/feedback`, 'POST', { outcome }); render(); notice('自报反馈已记录；不等于实际公益效果。');
 }));
-el('large').addEventListener('click', () => { const active = document.documentElement.classList.toggle('large'); el('large').setAttribute('aria-pressed', String(active)); });
+el('large').addEventListener('click', () => { const active = document.documentElement.classList.toggle('large'); el('large').setAttribute('aria-pressed', String(active)); fitFactEditors(); });
+window.addEventListener('resize', fitFactEditors);
+const factResizeObserver = new ResizeObserver(fitFactEditors);
+factResizeObserver.observe(el('fact-fields'));
 async function init() {
   try {
     const config = await api<{ fields: Record<Field, string>; sampleText: string; provider: { live: boolean; limit: number; timeoutMs?: number | null; configError?: string | null }; contentEditing?: boolean }>('/config'); fields = config.fields; sampleText = config.sampleText;
