@@ -1,18 +1,29 @@
 import { test, expect } from '@playwright/test';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+const hasAtlas = existsSync('.local/avatar/character-atlas-v1.png');
 
-test('抽象入口：2D 动作复位、预设互动、科普到海报任务，零外部模型请求', async ({ page, context }) => {
+test('角色入口：可用动作复位或文字退路、预设互动、科普到海报任务，零外部模型请求', async ({ page, context }) => {
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await expect(page.locator('h1')).toContainText('听我把话说完');
   await expect(page.locator('#host-disclosure')).toContainText('不是实时 AI 对话');
-  await page.locator('#host-bow').click(); await expect(page.locator('#host-speech')).toContainText('才艺结束');
-  await expect(page.locator('#character-frame')).toHaveClass(/bowing/);
-  await expect(page.locator('#character-frame')).not.toHaveClass(/bowing/);
-  await page.locator('#host-bow').click(); await expect(page.locator('#host-speech')).toContainText('先不磕了');
-  await expect(page.locator('#character-frame')).toHaveClass(/bowing/);
-  await expect(page.locator('#character-frame')).not.toHaveClass(/bowing/);
-  await page.locator('#host-motion').click(); await expect(page.locator('#host-motion')).toHaveAttribute('aria-pressed', 'false');
+  if (hasAtlas) await expect(page.locator('#avatar-animation')).toBeVisible();
+  else await expect(page.locator('#character-fallback')).toBeVisible();
+  for (const line of ['才艺结束','先不磕了']) {
+    await page.locator('#host-bow').click();
+    if (hasAtlas) {
+      await expect(page.locator('#host-speech')).toContainText(line);
+      await expect(page.locator('#character-frame')).toHaveClass(/bowing/);
+      await expect(page.locator('#character-frame')).not.toHaveClass(/bowing/);
+    } else {
+      await expect(page.locator('#host-speech')).toContainText('动作先省了');
+      await expect(page.locator('#character-frame')).not.toHaveClass(/bowing/);
+    }
+  }
+  if (hasAtlas) await page.locator('#host-motion').click();
+  else await expect(page.locator('#host-motion')).toBeDisabled();
+  await expect(page.locator('#host-motion')).toHaveAttribute('aria-pressed', 'false');
   await page.locator('#host-bow').click(); await expect(page.locator('#character-frame')).not.toHaveClass(/bowing/);
   await page.locator('#host-banter').click(); await expect(page.locator('#host-speech')).not.toHaveText('先不磕了。你先帮我核对一条信息，再说。');
   await page.locator('#learn-open').click(); await expect(page.locator('#quick-learn')).toBeVisible();
@@ -25,8 +36,8 @@ test('抽象入口：2D 动作复位、预设互动、科普到海报任务，�
   expect(errors).toEqual([]);
 });
 
-test('减少动态与参考图缺失均可继续文字任务；科普展开后整页 axe', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
+test('缺素材时停用动作并准确说明文字退路；减少动态与科普展开后整页 axe', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.route('**/reference-poster.jpg', route => route.abort());
   // Simulate both optional local visual assets being unavailable.
   await page.route('**/host.js', async route => {
@@ -36,8 +47,14 @@ test('减少动态与参考图缺失均可继续文字任务；科普展开后�
   });
   await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await expect(page.locator('#character-fallback')).toBeVisible();
+  await expect(page.locator('#avatar-kind')).toContainText('文字角色');
+  await expect(page.locator('#host-motion')).toBeDisabled();
   await expect(page.locator('#host-motion')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#host-bow')).toContainText('文字互动');
   await page.locator('#host-bow').click(); await expect(page.locator('#character-frame')).not.toHaveClass(/bowing/);
+  await expect(page.locator('#host-speech')).toContainText('动作先省了');
+  await page.emulateMedia({ reducedMotion:'reduce' });
+  await expect(page.locator('#host-motion')).toBeDisabled();
   expect(await page.locator('#character-frame').evaluate(e => getComputedStyle(e).animationName)).toBe('none');
   await page.locator('#nav-learn').click(); await expect(page.locator('#quick-learn')).toBeVisible();
   await page.evaluate(await readFile('node_modules/axe-core/axe.min.js', 'utf8'));

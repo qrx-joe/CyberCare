@@ -115,15 +115,17 @@ export function initHost() {
     reference.hidden = avatar.ready || referenceFailed;
     element('avatar-animation').hidden = !avatar.ready;
     element('character-fallback').hidden = avatar.ready || !referenceFailed;
-    element('avatar-kind').textContent = avatar.ready ? '2D 动态角色 · 本地帧动画' : '静态参考图 · 动画素材未就绪';
+    element('avatar-kind').textContent = avatar.ready ? '2D 动态角色 · 本地帧动画' : referenceFailed ? '文字角色 · 素材未附带' : '静态参考图 · 动画素材未就绪';
+    syncMotion();
   };
   const avatar = new SpriteAvatar(syncVisual);
   const say = (line: string) => { speech.textContent = line; avatar.speak(line.length); };
   const syncMotion = () => {
-    const allowed = motion && !reduced.matches;
+    const allowed = avatar.ready && motion && !reduced.matches;
     element('host-motion').setAttribute('aria-pressed', String(allowed));
-    element('host-motion').textContent = `角色动作：${allowed ? '开' : '关'}`;
-    element<HTMLButtonElement>('host-motion').disabled = reduced.matches;
+    element('host-motion').textContent = avatar.ready ? `角色动作：${allowed ? '开' : '关'}` : '角色动作：不可用';
+    element<HTMLButtonElement>('host-motion').disabled = reduced.matches || !avatar.ready;
+    element('bow-kind').textContent = allowed ? '2D 动作' : '文字互动';
     avatar.setEnabled(allowed);
   };
   const stopBow = () => { clearTimeout(bowTimer); frame.classList.remove('bowing'); element('bow-sound').hidden = true; };
@@ -132,15 +134,16 @@ export function initHost() {
   element('host-motion').addEventListener('click', () => { motion = !motion; stopBow(); syncMotion(); });
   element('host-bow').addEventListener('click', () => {
     stopBow(); bows++;
-    say(bows === 1 ? '咚。才艺结束。接下来，帮我看看一张海报？' : '先不磕了。你先帮我核对一条信息，再说。');
-    element('bow-sound').hidden = false;
-    if (motion && !reduced.matches) {
+    const allowed = avatar.ready && motion && !reduced.matches;
+    say(allowed ? (bows === 1 ? '咚。才艺结束。接下来，帮我看看一张海报？' : '先不磕了。你先帮我核对一条信息，再说。') : '动作先省了，我用文字打个招呼。接下来，帮我看看一张海报？');
+    if (allowed) {
+      element('bow-sound').hidden = false;
       // Class records the interaction; the sprite layer owns the character motion.
       void frame.offsetWidth;
       frame.classList.add('bowing');
       avatar.bow();
+      bowTimer = setTimeout(stopBow, 800);
     }
-    bowTimer = setTimeout(stopBow, 800);
   });
   element('host-banter').addEventListener('click', () => say(banter[Math.floor(Math.random() * banter.length)]!));
   const showLesson = () => {
