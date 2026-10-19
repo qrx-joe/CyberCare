@@ -6,7 +6,7 @@
   --muted: #565b55;
   --lime: #d8ff57;
   --violet: #c1a8f9;
-  --stage: #e9e3f4;
+  --stage: #f1eef5;
   --coral: #ffb8a5;
   --line: #252923;
   --soft-line: #babdb1;
@@ -65,7 +65,7 @@ main { width: min(1360px, calc(100% - 80px)); margin: auto; }
 .hero-footnote span { font-family: system-ui, 'Microsoft YaHei', sans-serif; letter-spacing: .03em; }
 .character-card {
   min-width: 0; margin: 0; padding: 1.25rem 1.5rem; border-left: 2px solid var(--line); background-color: var(--stage);
-  background-image: radial-gradient(#77638b24 1px, transparent 1px); background-size: 22px 22px; color: var(--ink);
+  background-image: radial-gradient(#77638b14 1px, transparent 1px); background-size: 22px 22px; color: var(--ink);
 }
 .character-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .25rem .75rem; font: .65rem/1.6 ui-monospace, 'Microsoft YaHei', monospace; color: var(--muted); }
 #host-motion { color: var(--ink); background: var(--surface); border-color: var(--line); font-size: .7rem; padding: .3rem .5rem; }
@@ -81,6 +81,8 @@ main { width: min(1360px, calc(100% - 80px)); margin: auto; }
 #avatar-animation { overflow: hidden; }
 #avatar-body { transform-origin: 50% 85%; }
 #avatar-canvas { display: block; width: 100%; height: 100%; }
+/* Soften optional character art without changing the source assets or text contrast. */
+#avatar-canvas, #character-image { filter: saturate(.72) brightness(1.08) contrast(.9); }
 [data-motion=on] #avatar-body { animation: avatar-breathe 4.5s ease-in-out infinite; }
 .bowing[data-motion=on] #avatar-body { animation: avatar-bow .75s ease-in-out; }
 @keyframes avatar-breathe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-4px) scale(1.008); } }
