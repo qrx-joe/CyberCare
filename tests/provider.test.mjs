@@ -6,6 +6,79 @@ import { fromTranscript, SAMPLE_TEXT } from '../dist/domain.js';
 const env = { STEPFUN_API_KEY: 'dummy-test-only', STEPFUN_BASE_URL: 'https://api.stepfun.com/v1', STEPFUN_MODEL: 'test-model', MODEL_REQUEST_LIMIT: '1' };
 const input = { mode: 'live', permission: true, sourceNote: '原创合成单元测试', image: { name: 'synthetic.png', mime: 'image/png', data: 'fake-unit-input' } };
 
+test('有界等待与显式推理强度进入实际请求，默认仍为 30 秒且不额外指定强度', async () => {
+  const originalFetch = globalThis.fetch, originalTimeout = AbortSignal.timeout;
+  const waits = [], payloads = [];
+  try {
+    AbortSignal.timeout = ms => { waits.push(ms); return originalTimeout(ms); };
+    globalThis.fetch = async (_url, options) => {
+      payloads.push(JSON.parse(options.body));
+      return new Response(JSON.stringify({ choices:[{ message:{ content:JSON.stringify(fromTranscript(SAMPLE_TEXT)) } }] }));
+    };
+    const tuned = createProvider({ ...env, STEPFUN_MODEL:'step-5-preview', MODEL_TIMEOUT_MS:'90000', STEPFUN_REASONING_EFFORT:'low' });
+    assert.equal(tuned.info().timeoutMs, 90000);
+    const result = await tuned.extract(input, new AbortController().signal);
+    const baseline = await createProvider(env).extract(input, new AbortController().signal);
+    assert.deepEqual(waits, [90000,30000]);
+    assert.equal(payloads[0].model, 'step-5-preview');
+    assert.equal(payloads[0].reasoning_effort, 'low');
+    assert.equal(payloads[0].max_tokens, 2500);
+    assert.equal('reasoning_effort' in payloads[1], false);
+    assert.equal(result.provider.timeoutMs, 90000);
+    assert.equal(result.provider.reasoningEffort, 'low');
+    assert.equal(baseline.provider.timeoutMs, 30000);
+    assert.equal(baseline.provider.reasoningEffort, null);
+  } finally { globalThis.fetch = originalFetch; AbortSignal.timeout = originalTimeout; }
+});
+
+test('等待和推理配置错误在外部调用前拒绝，人工路径仍可用且不暴露任意输入', async () => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  const settings = [
+    ...['0','999','90001','1000.5','Infinity','dummy-private-option'].map(value => ({ MODEL_TIMEOUT_MS:value })),
+    { STEPFUN_MODEL:'step-5-preview', STEPFUN_REASONING_EFFORT:'auto' },
+    { STEPFUN_MODEL:'test-model', STEPFUN_REASONING_EFFORT:'low' },
+  ];
+  try {
+    globalThis.fetch = async () => { requests++; throw new Error('External request must not start.'); };
+    for (const override of settings) {
+      const provider = createProvider({ ...env, ...override });
+      assert.equal(provider.info().live, false);
+      assert.ok(provider.info().configError);
+      assert.ok(!JSON.stringify(provider.info()).includes('dummy-private-option'));
+      await assert.rejects(() => provider.extract(input, new AbortController().signal), error => error.code === 'MODEL_CONFIG');
+      const manual = await provider.extract({ mode:'manual', permission:true, sourceNote:'原创合成参数回归', text:SAMPLE_TEXT }, new AbortController().signal);
+      assert.equal(manual.provider.requests, 0);
+      assert.equal(provider.info().requests, 0);
+    }
+    assert.equal(requests, 0);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('较长等待仍响应主动取消，失败记录包含本次等待与推理配置且无重试', async () => {
+  const originalFetch = globalThis.fetch;
+  const settings = { ...env, STEPFUN_MODEL:'step-5-preview', MODEL_TIMEOUT_MS:'90000', STEPFUN_REASONING_EFFORT:'low' };
+  let requests = 0;
+  try {
+    globalThis.fetch = async (_url, { signal }) => {
+      requests++;
+      return new Promise((_, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once:true }));
+    };
+    const provider = createProvider(settings), controller = new AbortController();
+    const pending = provider.extract(input, controller.signal); controller.abort();
+    await assert.rejects(() => pending, error => error.code === 'CANCELLED');
+    assert.equal(provider.info().requests, 1);
+    globalThis.fetch = async () => { requests++; throw new DOMException('dummy-private-option', 'TimeoutError'); };
+    await assert.rejects(() => createProvider(settings).extract(input, new AbortController().signal), error => {
+      assert.equal(error.diagnostic.timeoutMs, 90000);
+      assert.equal(error.diagnostic.reasoningEffort, 'low');
+      assert.equal(error.diagnostic.timeout, true);
+      assert.ok(!JSON.stringify(error).includes('dummy-private-option')); return true;
+    });
+    assert.equal(requests, 2);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test('Step Plan 使用显式套餐地址，拒绝后不回落到按请求计费接口', async () => {
   const originalFetch = globalThis.fetch;
   const urls = [];

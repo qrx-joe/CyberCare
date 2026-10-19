@@ -4,6 +4,7 @@ export const FIELDS = {
   title: '活动名称', time: '活动时间', location: '活动地点', registration: '报名方式',
 } as const;
 export type Field = keyof typeof FIELDS;
+export type ReasoningEffort = 'low' | 'medium' | 'high';
 export const fieldKeys = Object.keys(FIELDS) as Field[];
 export const factSchema = z.object({ value: z.string().max(500).nullable(), evidence: z.string().max(700) });
 export const extractionSchema = z.object({
@@ -57,7 +58,7 @@ export interface Task {
   changes: { at: string; field: Field; before: string; after: string; reason: string }[];
   audit?: Audit; review?: { at: string; revision: number; fields: Field[]; contentConfirmed: true };
   feedback?: { at: string; outcome: z.infer<typeof feedbackSchema>['outcome'] };
-  provider?: { name: string; model: string | null; promptVersion: string; requests: number; elapsedMs: number; usage: unknown };
+  provider?: { name: string; model: string | null; promptVersion: string; requests: number; elapsedMs: number; usage: unknown; timeoutMs?: number; reasoningEffort?: ReasoningEffort | null };
   error?: string;
   controller: AbortController;
 }

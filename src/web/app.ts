@@ -7,6 +7,7 @@ const transcript = el<HTMLTextAreaElement>('transcript');
 const image = el<HTMLInputElement>('image');
 const source = el<HTMLInputElement>('source-note');
 let sampleText = '';
+let modelTimeoutSeconds = 30;
 let task: PublicTask | null = null;
 let fields: Record<Field, string>;
 let imageUrl: string | undefined;
@@ -127,7 +128,11 @@ async function action(work: () => Promise<void>) {
   if (busy) return;
   const version = workspaceVersion;
   busy = true; error(); updateGates();
-  try { await work(); } catch (e) { if (version === workspaceVersion && !(e instanceof ExpiredWorkspace)) error(e instanceof Error ? e.message : '操作失败，请重试。'); }
+  try { await work(); } catch (e) {
+    if (version === workspaceVersion && !(e instanceof ExpiredWorkspace)) {
+      error(e instanceof Error ? e.message : '操作失败，请重试。'); notice('本次操作未完成，请查看错误说明。');
+    }
+  }
   finally { if (version === workspaceVersion) busy = false; updateGates(); }
 }
 function setupMode() {
@@ -141,7 +146,7 @@ function setupMode() {
   document.querySelector<HTMLLabelElement>('label[for=transcript]')!.hidden = live;
   el('text-help').hidden = live;
   el('file-group').hidden = sample;
-  el('mode-help').textContent = sample ? '原创合成海报用于验证流程，不代表真实公益活动或模型效果。' : live ? '图片将发送给已配置的 StepFun 视觉模型。AI 提取不等于事实核实。' : '图片用于对照并在服务端检查，不发送给模型；草稿来自你粘贴的转录文字，不是识别结果。';
+  el('mode-help').textContent = sample ? '原创合成海报用于验证流程，不代表真实公益活动或模型效果。' : live ? `图片将发送给已配置的 StepFun 视觉模型。AI 提取不等于事实核实。最多等待 ${modelTimeoutSeconds} 秒，可取消，无自动重试。` : '图片用于对照并在服务端检查，不发送给模型；草稿来自你粘贴的转录文字，不是识别结果。';
   el<HTMLInputElement>('permission').checked = false;
   const preview = el<HTMLImageElement>('poster-preview');
   preview.src = sample ? new URL('poster.svg', appBase).href : imageUrl || '';
@@ -229,7 +234,7 @@ el('input-form').addEventListener('submit', event => {
     const version = workspaceVersion;
     const file = mode.value === 'sample' ? undefined : image.files?.[0];
     if (mode.value === 'live' && !file) throw new Error('请选择海报图片。');
-    notice(mode.value === 'live' ? '正在调用真实视觉模型，请稍候；最多等待 30 秒，无自动重试。' : '正在整理转录文字；本路径没有 AI 调用。');
+    notice(mode.value === 'live' ? `正在调用真实视觉模型，请稍候；最多等待 ${modelTimeoutSeconds} 秒，无自动重试。` : '正在整理转录文字；本路径没有 AI 调用。');
     const payload = { mode: mode.value, sourceNote: source.value, permission: el<HTMLInputElement>('permission').checked, text: transcript.value, ...(file ? { image: { name: file.name, mime: file.type, data: await imageData(file) } } : {}) };
     requireCurrent(version);
     const signature = JSON.stringify(payload);
@@ -330,7 +335,8 @@ el('send-feedback').addEventListener('click', () => void action(async () => {
 el('large').addEventListener('click', () => { const active = document.documentElement.classList.toggle('large'); el('large').setAttribute('aria-pressed', String(active)); });
 async function init() {
   try {
-    const config = await api<{ fields: Record<Field, string>; sampleText: string; provider: { live: boolean; limit: number }; contentEditing?: boolean }>('/config'); fields = config.fields; sampleText = config.sampleText;
+    const config = await api<{ fields: Record<Field, string>; sampleText: string; provider: { live: boolean; limit: number; timeoutMs?: number | null; configError?: string | null }; contentEditing?: boolean }>('/config'); fields = config.fields; sampleText = config.sampleText;
+    modelTimeoutSeconds = Math.ceil((config.provider.timeoutMs ?? 30000) / 1000);
     contentEditing = config.contentEditing === true;
     el('content-editor').hidden = !contentEditing;
     renderSamplePreview();
@@ -341,6 +347,7 @@ async function init() {
     const live = mode.querySelector<HTMLOptionElement>('option[value=live]')!;
     live.disabled = !config.provider.live; live.textContent = config.provider.live ? `真实视觉识别 · 进程最多 ${config.provider.limit} 次请求 / 无自动重试` : '真实视觉识别 · 未配置，未验证';
     setupMode(); updateGates(); notice('可使用合成样例演示。真实识别是否可用以上方配置状态为准。');
+    if (config.provider.configError) error(`真实识别配置不可用：${config.provider.configError}可以继续使用合成样例或人工转录。`);
   } catch { el('sample-preview-status').textContent = '示例暂不可用，请确认服务已启动。'; error('无法读取服务配置，请确认服务可用。'); }
 }
 void init();
