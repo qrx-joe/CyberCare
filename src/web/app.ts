@@ -204,7 +204,7 @@ function render() {
   for (const [key, label] of Object.entries(fields) as [Field, string][]) {
     const wrap = document.createElement('div');
     const l = document.createElement('label'); l.htmlFor = `fact-${key}`; l.textContent = label;
-    const input = document.createElement('input'); input.id = `fact-${key}`; input.maxLength = 500; input.value = task.values[key]; input.placeholder = '未知；留空可明确确认未知'; input.setAttribute('aria-describedby', `evidence-${key} guidance-${key}`);
+    const input = document.createElement('textarea'); input.rows = 2; input.id = `fact-${key}`; input.maxLength = 500; input.value = task.values[key]; input.placeholder = '未知；留空可明确确认未知'; input.setAttribute('aria-describedby', `evidence-${key} guidance-${key}`);
     const evidence = document.createElement('small'); evidence.id = `evidence-${key}`; evidence.textContent = `提取依据：${task.extraction.facts[key].evidence || '无可定位文字；请核实或保留未知'}${task.changes.some(c => c.field === key) ? '（此字段有人工修订，见证据 JSON）' : ''}`;
     const guidance = document.createElement('p'); guidance.id = `guidance-${key}`; guidance.className = 'fact-guidance';
     const updateGuidance = () => { guidance.textContent = fieldGuidance(key, input.value); guidance.hidden = !guidance.textContent; };
@@ -265,7 +265,7 @@ el('edit-form').addEventListener('submit', event => {
     if (!task) return;
     const reason = el<HTMLInputElement>('edit-reason').value.trim();
     if (!reason) throw new Error('请填写修改依据。');
-    const values = Object.fromEntries(Object.keys(fields).map(k => [k, el<HTMLInputElement>(`fact-${k}`).value]));
+    const values = Object.fromEntries(Object.keys(fields).map(k => [k, el<HTMLTextAreaElement>(`fact-${k}`).value]));
     const content = Object.fromEntries(['original', 'summary', 'description'].map(key => [key, el<HTMLTextAreaElement>(`content-${key}`).value]));
     task = await api<PublicTask>(`/tasks/${task.id}/edit`, 'POST', { revision: task.revision, values, reason, ...(contentEditing ? { content } : {}) });
     render(); notice('已保存修改；旧确认与检测已失效，请重新检测。');

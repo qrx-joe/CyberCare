@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { AppError, FIELDS, extractionSchema, contentSchema, fieldKeys, type Extraction, type Field, type Task, type ReviewedContent } from './contracts.js';
+import { AppError, FIELDS, extractionSchema, factSchema, contentSchema, fieldKeys, type Extraction, type Field, type Task, type ReviewedContent } from './contracts.js';
 
 export const SAMPLE_TEXT = '活动名称：一起读书 · 社区公益阅读会\n活动时间：2026 年 10 月 24 日 14:00—16:00\n活动地点：示例社区活动室二楼\n活动说明：带一本喜欢的书，一起分享阅读。\n费用：免费\n说明：这是开发者编写的合成演示素材，不是真实活动。';
 export const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
@@ -15,15 +15,35 @@ export function fromTranscript(original: string): Extraction {
   return normalizeExtraction({ original, facts, summary: '按明确字段标签整理；未标注的内容需要人工核对。', description: '本路径没有视觉识别；请对照原海报核对转录。', uncertainties: [] });
 }
 
+// Locate layout-only whitespace differences, then return the actual source span.
+// Escaped non-whitespace text remains literal: no fuzzy words, numbers or punctuation.
+function sourceSpan(source: string, quote: string): string | null {
+  if (!quote.trim()) return null;
+  if (source.includes(quote)) return quote;
+  const pattern = quote.trim().split(/\s+/u).map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+');
+  return source.match(new RegExp(pattern, 'u'))?.[0] ?? null;
+}
+
 /** Evidence substring checks are consistency checks, not proof of image truth. */
 export function normalizeExtraction(value: unknown): Extraction {
   const data = extractionSchema.parse(value);
   for (const key of fieldKeys) {
     const fact = data.facts[key];
     if (fact.value && /^(未知|无法辨认|无法确认|未提供|不清楚|\[无法辨认\])$/.test(fact.value.trim())) fact.value = null;
-    if (fact.value && (!fact.evidence.trim() || !data.original.includes(fact.evidence) || !fact.evidence.includes(fact.value))) {
-      data.uncertainties.push(`${FIELDS[key]}的提取值缺少可定位的原文依据，已置为未知。`);
-      fact.value = null;
+    if (fact.value) {
+      const evidence = sourceSpan(data.original, fact.evidence);
+      const locatedValue = evidence ? sourceSpan(evidence, fact.value) : null;
+      if (evidence && locatedValue) {
+        const located = factSchema.safeParse({ value: locatedValue, evidence });
+        if (located.success) { fact.value = located.data.value; fact.evidence = located.data.evidence; }
+        else {
+          data.uncertainties.push(`${FIELDS[key]}的原文跨度超出当前字段长度范围，已置为未知，请人工核对。`);
+          fact.value = null;
+        }
+      } else {
+        data.uncertainties.push(`${FIELDS[key]}的提取值缺少可定位的原文依据，已置为未知。`);
+        fact.value = null;
+      }
     }
     if (!fact.value) data.uncertainties.push(`${FIELDS[key]}未知：原文未提供、未标注或无法可靠识别；不可自行补全。`);
   }

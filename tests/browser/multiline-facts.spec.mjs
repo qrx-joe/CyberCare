@@ -1,0 +1,37 @@
+import { test, expect } from '@playwright/test';
+import { readFile, mkdir } from 'node:fs/promises';
+import { hash } from '../../dist/domain.js';
+
+test('多行日期和地点可完整核对；改其他字段不拼接或丢掉换行，实际导出仍对应检测', async ({ page,context }) => {
+  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.locator('#permission').check(); await page.locator('#create').click();
+  await expect(page.locator('#draft')).toBeVisible();
+  const location = 'Synthetic Hall\nRoad 1, Floor 4', time = '2026 年 10 月 24 日\n14:00—16:00';
+  await page.locator('#fact-location').fill(location); await page.locator('#fact-time').fill(time);
+  await expect(page.locator('#fact-location')).toHaveValue(location);
+  await expect(page.locator('#fact-time')).toHaveValue(time);
+  await page.locator('#edit-reason').fill('原创合成多行转录回归，不是真实活动');
+  await page.locator('#save').click(); await expect(page.locator('#notice')).toContainText('已保存修改');
+  await page.locator('#fact-title').fill('合成多行场地回归');
+  await page.locator('#edit-reason').fill('只改标题，保留原多行时间地点');
+  await page.locator('#save').click(); await expect(page.locator('#notice')).toContainText('已保存修改');
+  await expect(page.locator('#fact-location')).toHaveValue(location);
+  await expect(page.locator('#fact-time')).toHaveValue(time);
+  const id = (await page.locator('#task-meta').textContent()).match(/[a-f0-9-]{36}/)[0];
+  const task = await (await context.request.get(`/api/tasks/${id}`)).json();
+  expect(task.values.location).toBe(location); expect(task.values.time).toBe(time);
+  expect(task.changes.filter(change => change.field === 'location')).toHaveLength(1);
+  await page.setViewportSize({width:320,height:900}); await page.locator('#large').click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const evidenceDirectory = '.local/validation/multiline-evidence-20261019';
+  await mkdir(evidenceDirectory,{recursive:true});
+  await page.locator('#edit-form').screenshot({path:`${evidenceDirectory}/review-320-large.png`});
+  await page.locator('#audit').click(); await expect(page.locator('#audit-output')).toContainText('Critical 0 / Serious 0');
+  for (const key of ['title','time','location','registration']) await page.locator(`#checked-${key}`).check();
+  await page.locator('#confirm-content').check(); await page.locator('#confirm').click();
+  const receipt = await (await context.request.get(`/api/tasks/${id}/receipt`)).json();
+  const waiting = page.waitForEvent('download'); await page.locator('#export-html').click();
+  const html = await readFile(await (await waiting).path(),'utf8');
+  expect(html).toContain(location); expect(html).toContain(time); expect(hash(html)).toBe(receipt.audit.htmlHash);
+  await page.locator('#delete').click();
+});
