@@ -71,6 +71,7 @@
       <div id="manual-fallback" class="callout" hidden><h3>识别没完成，也可以继续</h3><p id="manual-fallback-help">删除本次失败或已取消的任务，保留本页图片和来源供你转录。不再调用模型，本页材料原到期时间不变；已发出的请求可能仍计费。</p><button id="use-manual" type="button" aria-describedby="manual-fallback-help">保留图片，改用人工转录</button></div>
       <div id="draft" hidden>
         <p id="provider-label" class="callout"></p>
+        <div id="unknown-facts-help" class="fact-guidance" hidden><strong>四项活动信息目前均为未知。</strong><p>可以保留未知，不用猜答案。请对照原图或转录；若材料没有活动文字或选错了图片，可删除当前任务后重新提交。补充信息时请注明已核实的来源。</p><button id="review-material" type="button">回到材料对照</button></div>
         <details><summary>查看原始转录、整理内容与不确定项</summary><h3>原始转录（可能有识别错误）</h3><pre id="original"></pre><h3>初次提取概述 / 图像说明（保留用于对照）</h3><p id="summary"></p><ul id="uncertainties"></ul></details>
         <form id="edit-form"><div id="fact-fields"></div>
           <details id="content-editor" hidden><summary>修正完整文字、概述与图像说明</summary><p class="muted">四项信息和下方正文会分别导出，请核对两处是否一致。修订保留提取原文与修改依据；保存后须重新检测。</p><label for="content-original">核对后的完整文字</label><textarea id="content-original" rows="8" maxlength="12000" required></textarea><label for="content-summary">核对后的概述</label><textarea id="content-summary" rows="3" maxlength="1500"></textarea><label for="content-description">核对后的图像说明</label><textarea id="content-description" rows="3" maxlength="1500"></textarea></details>

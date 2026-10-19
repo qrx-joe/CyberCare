@@ -127,6 +127,8 @@ async function api<T>(path: string, method = 'GET', body?: unknown, key?: string
   return data as T;
 }
 function updateGates() {
+  const factEditors = el('fact-fields').querySelectorAll<HTMLTextAreaElement>('textarea');
+  el('unknown-facts-help').hidden = task?.status !== 'needs_review' || factEditors.length !== 4 || [...factEditors].some(input => input.value.trim());
   for (const input of el('input-form').querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input,select,textarea')) input.disabled = busy || !!task;
   for (const input of el('edit-form').querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input,textarea')) input.disabled = busy;
   const audited = !!task?.audit && task.audit.revision === task.revision && !task.audit.violations.some(v => ['serious', 'critical'].includes(v.impact || ''));
@@ -293,6 +295,10 @@ el('audit').addEventListener('click', () => void action(async () => {
   render(); notice('检测完成。请查看问题与人工检查项，再逐项确认。');
 }));
 for (const key of ['original', 'summary', 'description']) el(`content-${key}`).addEventListener('input', () => { dirty = true; clearChecks(); updateGates(); });
+el('review-material').addEventListener('click', () => {
+  el('input-title').focus({ preventScroll: true });
+  el('input-title').scrollIntoView({ block: 'start', behavior: 'auto' });
+});
 el('review-form').addEventListener('submit', event => {
   event.preventDefault(); void action(async () => {
     if (!task || dirty) throw new Error('请先保存修改并重新检测。');
