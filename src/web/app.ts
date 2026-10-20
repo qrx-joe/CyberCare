@@ -1,4 +1,4 @@
-import type { Field, PublicTask } from '../contracts.js';
+import type { Field, PublicTask, TimeKind, TimeReference } from '../contracts.js';
 import { initHost } from './host.js';
 
 function el<T extends HTMLElement = HTMLElement>(id: string) { return document.getElementById(id) as T; }
@@ -14,6 +14,7 @@ let imageUrl: string | undefined;
 let busy = false;
 let dirty = false;
 let contentEditing = false;
+let refreshTimePicker: (() => boolean) | undefined;
 let pendingCreation: { signature: string; key: string } | null = null;
 const drafts: Record<string, { text: string; source: string }> = {};
 let previousMode: string | null = null;
@@ -88,6 +89,9 @@ function fieldGuidance(key: Field, value: string) {
   if (key === 'time' && /今天|明天|后天|今晚|明晚|本周|这周|下周|本月|下月/.test(value)) {
     return '活动时间含相对日期。请向活动方确认具体日期及其参照日期；即使有年份，也不要按阅读当天推算。';
   }
+  if (key === 'time' && value.split(/\r?\n/).some(line => /^(活动日期\/时段|报名截止|提交截止|用途待核实)[：:]/.test(line) && !/(?:19|20)\d{2}/.test(line))) {
+    return '部分时间条目未标明完整年份。请按各自用途核实日期，不要从另一条截止时间补全年份。';
+  }
   return key === 'time' && !/(?:19|20)\d{2}/.test(value)
     ? '请对照原图核实年份、具体日期和时段；不要把“今天”或“明天”自行换算成日期。' : '';
 }
@@ -97,6 +101,65 @@ function fitFactEditors() {
     input.style.height = 'auto';
     input.style.height = `${input.scrollHeight + input.offsetHeight - input.clientHeight}px`;
   }
+}
+function createTimePicker(input: HTMLTextAreaElement, sourceText: string, references: TimeReference[], id: string, revision: number) {
+  const labels: Record<TimeKind, string> = { event:'活动日期/时段', 'registration-deadline':'报名截止', 'submission-deadline':'提交截止', unknown:'用途待核实' };
+  const element = document.createElement('details'); element.id = 'time-picker'; element.className = 'time-picker';
+  const toggle = document.createElement('summary'); toggle.textContent = '核对不同用途的时间';
+  const help = document.createElement('p'); help.id = 'time-picker-help';
+  help.textContent = '分类是识别建议，请对照原图更正；不清楚就保留“用途待核实”。勾选后点击写入，才会填入空白时间草稿；随后仍须填写依据、保存、检测和确认。';
+  const list = document.createElement('ul');
+  const rows = references.map((reference, index) => {
+    const item = document.createElement('li'), include = document.createElement('input'), selectLabel = document.createElement('label');
+    include.type = 'checkbox'; include.id = `time-ref-${index}`; selectLabel.className = 'check';
+    selectLabel.append(include, document.createTextNode(`采用条目 ${index + 1}`));
+    const text = document.createElement('p'), quote = document.createElement('small'), sourceState = document.createElement('p');
+    sourceState.id = `time-ref-state-${index}`; sourceState.hidden = true;
+    include.setAttribute('aria-describedby', sourceState.id);
+    text.textContent = reference.value; text.className = 'time-reference-value'; quote.textContent = `识别引用（含义待核对）：${reference.evidence}`;
+    const roleLabel = document.createElement('label'), role = document.createElement('select'); role.id = `time-role-${index}`;
+    role.setAttribute('aria-describedby', sourceState.id);
+    roleLabel.htmlFor = role.id; roleLabel.textContent = `条目 ${index + 1} 的用途`;
+    for (const [kind, label] of Object.entries(labels)) { const option = document.createElement('option'); option.value = kind; option.textContent = label; role.append(option); }
+    role.value = reference.kind;
+    for (const control of [include, role]) control.addEventListener('change', () => { clearChecks(); updateGates(); });
+    item.append(selectLabel, text, quote, roleLabel, role, sourceState); list.append(item);
+    return { reference, include, role, sourceState };
+  });
+  const preview = document.createElement('pre'); preview.id = 'time-composition-preview'; preview.hidden = true;
+  const status = document.createElement('p'); status.id = 'time-picker-status';
+  const button = document.createElement('button'); button.type = 'button'; button.id = 'apply-time-references'; button.textContent = '写入空白时间草稿';
+  button.setAttribute('aria-describedby', `${help.id} ${status.id}`);
+  const composed = () => rows.filter(row => row.include.checked).map(row => `${labels[row.role.value as TimeKind]}：${row.reference.value}`).join('\n');
+  const refresh = () => {
+    const active = !busy && task?.id === id && task.revision === revision && task.status === 'needs_review';
+    const sourceChanged = contentEditing && el<HTMLTextAreaElement>('content-original').value !== sourceText;
+    let unavailableSelection = false;
+    for (const row of rows) {
+      const available = !sourceChanged && sourceText.includes(row.reference.evidence) && row.reference.evidence.includes(row.reference.value);
+      row.include.disabled = !active || (!available && !row.include.checked); // An unavailable selection can still be cancelled.
+      row.role.disabled = !active || !available;
+      row.sourceState.textContent = '这条识别引用已不在当前正文中，不能直接采用；请对照材料核实。'; row.sourceState.hidden = available || sourceChanged;
+      if (row.include.checked && !available) unavailableSelection = true;
+    }
+    const value = composed(), pending = rows.some(row => row.include.checked), tooLong = value.length > input.maxLength;
+    preview.textContent = value; preview.hidden = !pending;
+    button.disabled = !active || sourceChanged || unavailableSelection || !!input.value || !pending || tooLong;
+    status.textContent = sourceChanged || unavailableSelection ? '正文已变化，暂不能写入；可取消勾选，保存正文后重新核对。'
+      : input.value ? '时间字段已有内容，不会覆盖。需要改写时请自行修改或清空；也可取消勾选。'
+      : tooLong ? '组合文字超过 500 字符，未截断或写入；请减少勾选条目或手动核对。'
+      : pending ? '以上选取尚未写入。请写入时间草稿或取消勾选，再进行保存、检测和确认。'
+      : '勾选需要保留的条目，并核对用途。';
+    return pending;
+  };
+  button.addEventListener('click', () => {
+    checkExpiry(); if (!button.isConnected) return; refresh(); if (button.disabled) return;
+    input.value = composed(); for (const row of rows) row.include.checked = false;
+    input.dispatchEvent(new Event('input', { bubbles:true }));
+    notice('已按核对的用途写入时间草稿，尚未保存。请填写修改依据并保存，再检测和确认。'); input.focus();
+  });
+  element.append(toggle, help, list, preview, status, button);
+  return { element, refresh };
 }
 function renderSamplePreview() {
   // Fixed examples only: never read the active upload, draft, or task here.
@@ -156,17 +219,18 @@ function updateGates() {
   const factEditors = el('fact-fields').querySelectorAll<HTMLTextAreaElement>('textarea');
   el('unknown-facts-help').hidden = task?.status !== 'needs_review' || factEditors.length !== 4 || [...factEditors].some(input => input.value.trim());
   for (const input of el('input-form').querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input,select,textarea')) input.disabled = busy || !!task;
-  for (const input of el('edit-form').querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input,textarea')) input.disabled = busy;
+  for (const input of el('edit-form').querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input,select,textarea')) input.disabled = busy;
   const excerptSource = task?.reviewedContent?.original ?? task?.extraction?.original;
   const excerptSourceChanged = contentEditing && el<HTMLTextAreaElement>('content-original').value !== excerptSource;
   for (const button of el('fact-fields').querySelectorAll<HTMLButtonElement>('button[data-excerpt-field]')) {
     button.disabled = busy || task?.status !== 'needs_review' || excerptSourceChanged || !!el<HTMLTextAreaElement>(`fact-${button.dataset.excerptField}`).value;
   }
+  const timeSelectionPending = refreshTimePicker?.() ?? false;
   const audited = !!task?.audit && task.audit.revision === task.revision && !task.audit.violations.some(v => ['serious', 'critical'].includes(v.impact || ''));
   const checked = fields && (Object.keys(fields) as Field[]).every(k => el<HTMLInputElement>(`checked-${k}`).checked) && el<HTMLInputElement>('confirm-content').checked;
-  el<HTMLButtonElement>('confirm').disabled = busy || dirty || !audited || !checked;
-  el<HTMLButtonElement>('audit').disabled = busy || dirty;
-  el<HTMLButtonElement>('save').disabled = busy || !dirty;
+  el<HTMLButtonElement>('confirm').disabled = busy || dirty || timeSelectionPending || !audited || !checked;
+  el<HTMLButtonElement>('audit').disabled = busy || dirty || timeSelectionPending;
+  el<HTMLButtonElement>('save').disabled = busy || !dirty || timeSelectionPending;
   el<HTMLButtonElement>('create').disabled = busy || !!task;
   el<HTMLButtonElement>('use-manual').disabled = busy;
 }
@@ -216,6 +280,7 @@ image.addEventListener('change', () => {
 });
 
 function render() {
+  refreshTimePicker = undefined;
   if (task) retainUntil(Date.parse(task.expiresAt));
   host.setTask(task);
   el('task-controls').hidden = !task;
@@ -265,7 +330,12 @@ function render() {
     updateGuidance();
     input.addEventListener('input', () => { updateGuidance(); fitFactEditors(); dirty = true; clearChecks(); updateGates(); });
     wrap.append(l, input, evidence, guidance);
-    if (unlocatedQuote && !task.extraction.facts[key].value) {
+    const timeReferences = task.extraction.timeReferences ?? [];
+    if (key === 'time' && timeReferences.length) {
+      const picker = createTimePicker(input, content.original, timeReferences, task.id, task.revision);
+      wrap.append(picker.element); refreshTimePicker = picker.refresh;
+    }
+    if (unlocatedQuote && !task.extraction.facts[key].value && !(key === 'time' && timeReferences.length)) {
       const fragments = [...new Set(quote.split(/\r?\n/).map(fragment => fragment.trim()))]
         .filter(fragment => fragment && fragment.length <= 500 && content.original.includes(fragment)).slice(0, 6);
       if (fragments.length) {
@@ -348,6 +418,7 @@ async function poll(id: string) {
 el('edit-form').addEventListener('submit', event => {
   event.preventDefault(); void action(async () => {
     if (!task) return;
+    if (refreshTimePicker?.()) throw new Error('时间选取尚未写入，请先写入时间草稿或取消勾选。');
     const reason = el<HTMLInputElement>('edit-reason').value.trim();
     if (!reason) throw new Error('请填写修改依据。');
     const values = Object.fromEntries(Object.keys(fields).map(k => [k, el<HTMLTextAreaElement>(`fact-${k}`).value]));
@@ -358,6 +429,7 @@ el('edit-form').addEventListener('submit', event => {
 });
 el('audit').addEventListener('click', () => void action(async () => {
   if (!task) return;
+  if (dirty || refreshTimePicker?.()) throw new Error('请先写入或取消时间选取，并保存当前修改。');
   notice('服务端正在对本次导出的完整 HTML 运行 axe 检测…');
   task = await api<PublicTask>(`/tasks/${task.id}/audit`, 'POST', { revision: task.revision });
   render(); notice('检测完成。请查看问题与人工检查项，再逐项确认。');
@@ -369,7 +441,7 @@ el('review-material').addEventListener('click', () => {
 });
 el('review-form').addEventListener('submit', event => {
   event.preventDefault(); void action(async () => {
-    if (!task || dirty) throw new Error('请先保存修改并重新检测。');
+    if (!task || dirty || refreshTimePicker?.()) throw new Error('请先写入或取消时间选取，保存修改并重新检测。');
     const confirmed = Object.fromEntries(Object.keys(fields).map(k => [k, el<HTMLInputElement>(`checked-${k}`).checked]));
     task = await api<PublicTask>(`/tasks/${task.id}/review`, 'POST', { revision: task.revision, confirmed, contentConfirmed: el<HTMLInputElement>('confirm-content').checked });
     render();

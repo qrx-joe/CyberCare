@@ -117,6 +117,9 @@ function dateReviewNote(task: Task): string {
   if (time && /今天|明天|后天|今晚|明晚|本周|这周|下周|本月|下月/.test(time)) {
     return '相对日期待核实：活动时间含相对表述，请向活动方确认具体日期及其参照日期；不要按阅读当天推算。';
   }
+  if (time?.split(/\r?\n/).some(line => /^(活动日期\/时段|报名截止|提交截止|用途待核实)[：:]/.test(line) && !/(?:19|20)\d{2}/.test(line))) {
+    return '年份待核实：部分时间条目未标明完整年份。请按各自用途核实完整日期，不要从另一条截止时间补全年份。';
+  }
   return time && !/(?:19|20)\d{2}/.test(time)
     ? '年份待核实：活动时间未识别到完整年份。请向活动方确认完整日期后再安排行程；不要按阅读当天推算或自行补全年份。' : '';
 }
@@ -143,7 +146,7 @@ nav{border-block:1px solid #bac5b9;margin:1.5rem 0;padding:.5rem 0}nav ul{displa
 @media print{nav{display:none}body{margin:0;max-width:none;color:#000;background:#fff}}
 </style></head><body><main><h1>海报文字版</h1>
 <nav aria-label="阅读目录"><p>跳到你需要的内容</p><ul>${sections.map(([id, label]) => `<li><a href="#${id}">${label}</a></li>`).join('')}</ul></nav>
-<section><h2 id="facts" tabindex="-1">活动信息</h2><dl>${fieldKeys.map(k => `<dt>${FIELDS[k]}</dt><dd>${escapeHtml(task.values![k] || '未知，请向活动方核实')}</dd>`).join('')}</dl>${dateNote ? `<p id="date-review" class="caution"><strong>${escapeHtml(dateNote)}</strong></p>` : ''}</section>
+<section><h2 id="facts" tabindex="-1">活动信息</h2><dl>${fieldKeys.map(k => `<dt>${FIELDS[k]}</dt><dd${task.values![k].includes('\n') ? ' style="white-space:pre-wrap"' : ''}>${escapeHtml(task.values![k] || '未知，请向活动方核实')}</dd>`).join('')}</dl>${dateNote ? `<p id="date-review" class="caution"><strong>${escapeHtml(dateNote)}</strong></p>` : ''}</section>
 <section><h2 id="summary" tabindex="-1">内容概述</h2><pre>${escapeHtml(content.summary || '未提供概述。')}</pre></section>
 <section><h2 id="description" tabindex="-1">图像说明</h2><pre>${escapeHtml(content.description || '未提供图像说明。')}</pre></section>
 <section><h2 id="full-text" tabindex="-1">完整文字</h2><pre>${escapeHtml(content.original)}</pre></section>

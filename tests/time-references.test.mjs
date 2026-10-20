@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeExtraction,fromTranscript,SAMPLE_TEXT} from '../dist/domain.js';
+import {normalizeExtraction,fromTranscript,SAMPLE_TEXT,renderHtml,renderText} from '../dist/domain.js';
 const empty=()=>({value:null,evidence:''});
 const base=original=>({original,summary:'合成时间角色检查',description:'开发者原创文字，非模型结果',facts:{title:empty(),time:empty(),location:empty(),registration:empty()},uncertainties:[]});
 
@@ -41,4 +41,12 @@ test('条数、用途、空值及字段长度不合法时拒绝结构而不悄�
  for(const timeReferences of [Array(9).fill(reference),[{...reference,kind:'guessed-year'}],[{...reference,value:''}],[{...reference,value:'x'.repeat(501)}],[{...reference,evidence:'x'.repeat(701)}],null]){
   assert.throws(()=>normalizeExtraction({...base('May 1'),timeReferences}));
  }
+});
+
+test('一条截止有年份不能掩盖另一用途缺年份，输出保留待核实且不补写',()=>{
+ const extraction=fromTranscript(SAMPLE_TEXT),time='活动日期/时段：10月24日\n提交截止：2026年10月20日 23:59';
+ const task={extraction,values:{title:'合成用途日期',time,location:'',registration:''},source:{mode:'manual',note:'开发者原创合成材料'}};
+ for(const output of [renderHtml(task),renderText(task)]){assert.ok(output.includes('年份待核实'));assert.ok(output.includes(time));assert.equal(output.includes('活动日期/时段：2026年10月24日'),false);}
+ const complete={...task,values:{...task.values,time:time.replace('10月24日','2026年10月24日')}};
+ assert.equal(renderHtml(complete).includes('年份待核实'),false);
 });
