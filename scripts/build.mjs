@@ -2,6 +2,7 @@ import { cp, mkdir, rm, readFile, writeFile } from 'node:fs/promises';
 import { existsSync, realpathSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { relative } from 'node:path';
+import { loadReadonlyExample } from './readonly-example.mjs';
 const includeLocalMedia = process.env.CYBERCARE_INCLUDE_LOCAL_MEDIA !== '0';
 await mkdir('dist/web', { recursive: true });
 for (const name of ['index.html', 'style.css', 'poster.svg']) {
@@ -18,6 +19,11 @@ const atlas = includeLocalMedia && existsSync(atlasPath) ? await readFile(atlasP
 if (atlas && atlas.length > 6 * 1024 * 1024) throw new Error('Avatar atlas exceeds the local demo 6 MB asset limit.');
 const hostCode = await readFile('dist/web/host.js', 'utf8');
 await writeFile('dist/web/host.js', hostCode.replace('__CYBERCARE_AVATAR_ATLAS__', atlas ? `data:image/png;base64,${atlas.toString('base64')}` : ''));
+const example = includeLocalMedia ? await loadReadonlyExample(process.cwd()) : null;
+const appCode = await readFile('dist/web/app.js', 'utf8');
+const exampleMarker = /(['"])__CYBERCARE_READONLY_EXAMPLE__\1/;
+if (!exampleMarker.test(appCode)) throw new Error('Readonly example marker is missing.');
+await writeFile('dist/web/app.js', appCode.replace(exampleMarker, () => JSON.stringify(example)));
 let sourceCommit = null, sourceDirty = null;
 try {
   const gitRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
@@ -25,5 +31,5 @@ try {
   sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
   sourceDirty = !!execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 } catch { /* Source archives can build without Git metadata. */ }
-await writeFile('dist/build-info.json', JSON.stringify({ sourceCommit, sourceDirty, builtAt: new Date().toISOString(), localMediaIncluded: includeLocalMedia && !!(atlas || existsSync(reference)) }));
+await writeFile('dist/build-info.json', JSON.stringify({ sourceCommit, sourceDirty, builtAt: new Date().toISOString(), localMediaIncluded: includeLocalMedia && !!(atlas || existsSync(reference) || example) }));
 console.log('Built local demo in dist/ (no deployment).');

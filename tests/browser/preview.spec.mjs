@@ -16,8 +16,9 @@ test('首屏整理前后入口展示源图，保持未保存的核对草稿与�
   await page.locator('#hero-example').focus();await page.keyboard.press('Enter');
   await expect(page.locator('#sample-preview')).toHaveAttribute('open','');
   await expect(page.locator('#sample-preview-toggle')).toBeFocused();
+  if (await page.locator('#sample-example-picker').isVisible()) await page.locator('#sample-example').selectOption('sample');
   await expect(page.locator('#sample-source-image')).toBeVisible();
-  expect(await page.locator('#sample-source-image').evaluate(img=>img.complete&&img.naturalWidth>0)).toBe(true);
+  await expect.poll(()=>page.locator('#sample-source-image').evaluate(img=>img.complete&&img.naturalWidth>0)).toBe(true);
   await expect(page.locator('#sample-reading-title')).toContainText('一起读书');
   await expect(page.locator('#fact-location')).toHaveValue('尚未保存的合成场地');
   await expect(page.locator('#mode')).toHaveValue('manual');
@@ -38,6 +39,7 @@ test('只读示例可键盘展开，不创建任务、检测或导出，不覆�
   await page.locator('#source-note').fill('保留输入的回归检查');
   await page.locator('#sample-preview-toggle').focus(); await page.keyboard.press('Enter');
   await expect(page.locator('#sample-preview-content')).toBeVisible();
+  if (await page.locator('#sample-example-picker').isVisible()) await page.locator('#sample-example').selectOption('sample');
   await expect(page.locator('#sample-preview')).toContainText('尚未检测、尚未人工确认');
   await expect(page.locator('#sample-facts')).toContainText('未知；示例未提供');
   await expect(page.locator('#sample-reading-title')).toContainText('一起读书');

@@ -39,13 +39,15 @@
     <div class="desk-main"><div class="desk-head"><strong>REVIEW DESK / 海报核对台</strong><span id="desk-status">等待提交材料</span></div>
   <details id="sample-preview" class="sample-preview"><summary id="sample-preview-toggle">先看整理前后 <span>只读，不提交材料</span></summary>
     <p id="sample-disclosure" class="muted">合成示例 · 只读预览。尚未检测、尚未人工确认，不能作为正式回执。</p>
+    <div id="sample-example-picker" class="example-picker" hidden><label for="sample-example">选择对照材料</label><select id="sample-example"><option value="sample">合成阅读会 · 非 AI</option><option id="sample-recorded-option" value="recorded" disabled>公开活动海报 · 已有结果，非新识别</option></select></div>
     <p id="sample-preview-status" class="muted">正在读取本地合成样例…</p>
     <div id="sample-preview-content" hidden>
       <div class="preview-grid">
         <figure class="preview-source"><p class="eyebrow">BEFORE / 字在图片里</p><img id="sample-source-image" src="./poster.svg" alt="开发者原创合成阅读会海报，完整文字在下方转录。"><p id="sample-source-fallback" class="muted" hidden>原图暂不可用，可以对照下方的完整转录。</p><figcaption id="sample-source-credit">开发者原创合成海报 · 非真实活动</figcaption></figure>
-        <article class="preview-result"><p class="eyebrow">AFTER / 重点可以直接读</p><h3 id="sample-reading-title"></h3><dl id="sample-facts"></dl><p class="preview-note">没有提供的信息会保留未知。正式结果须完成检测与逐项确认后导出。</p></article>
+        <article class="preview-result"><p class="eyebrow">AFTER / 重点可以直接读</p><h3 id="sample-reading-title"></h3><dl id="sample-facts"></dl><p id="sample-date-note" class="preview-date-note" hidden></p><p class="preview-note">没有提供的信息会保留未知。正式结果须完成检测与逐项确认后导出。</p></article>
       </div>
       <details><summary>查看示例的完整转录</summary><pre id="sample-original"></pre></details>
+      <details><summary>查看待核实事项</summary><ul id="sample-notes"></ul></details>
       <a id="sample-to-form" href="#input-title">了解了，去提交与核对 ↗</a>
     </div>
   </details>
@@ -63,7 +65,7 @@
         <label class="check"><input id="permission" type="checkbox" required><span>我确认有权处理该材料；真实识别模式会将图片发给 StepFun。供应商留存策略尚未核实。</span></label>
         <button class="primary" id="create" type="submit">生成待核对草稿 <span aria-hidden="true">↗</span></button>
       </form>
-      <p class="privacy">本地单进程演示 · 原图仅在内存处理，不写入磁盘。任务及文字最多保留 30 分钟，重启即丢失；浏览器刷新会隐藏当前任务，未到期内容仍在服务端内存。删除不能撤回已发送的第三方请求。</p>
+      <p class="privacy">本地单进程演示 · 你提交的原图仅在内存处理，不写入磁盘。任务及文字最多保留 30 分钟，重启即丢失；浏览器刷新会隐藏当前任务，未到期内容仍在服务端内存。删除不能撤回已发送的第三方请求。公开示例是随本地演示附带的存档。</p>
     </section>
     <section class="panel result-panel" aria-labelledby="result-title"><p class="panel-label">REVIEW / 对照、修订与确认</p><div class="panel-heading"><h2 id="result-title" tabindex="-1">核对与回执</h2></div>
       <div id="empty"><span class="empty-symbol" aria-hidden="true">Aa</span><h3>让信息从图片里走出来</h3><p>先生成草稿，再逐项核对。<br>未知信息可以保留，不需要猜一个答案。</p><p class="muted">自动检测通过 ≠ 事实准确<br>人工确认 ≠ 用户验证或机构采用</p></div>

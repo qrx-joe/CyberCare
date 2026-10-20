@@ -15,12 +15,16 @@ test('源码包在其他 Git 仓库内构建时，不借用外层提交作为自
       await writeFile(resolve(directory, 'src/web', name), content);
     }
     await writeFile(resolve(directory, 'dist/web/host.js'), 'const atlas = "__CYBERCARE_AVATAR_ATLAS__";');
+    await writeFile(resolve(directory, 'dist/web/app.js'), 'const example = "__CYBERCARE_READONLY_EXAMPLE__";');
+    await mkdir(resolve(directory, '.local/examples'), { recursive:true });
+    await writeFile(resolve(directory, '.local/examples/poster-comparison.json'), 'invalid disabled local data');
     const child = spawnSync(process.execPath, [resolve('scripts/build.mjs')], { cwd:directory, env:{ ...process.env, CYBERCARE_INCLUDE_LOCAL_MEDIA:'0' }, encoding:'utf8', windowsHide:true });
     assert.equal(child.status, 0, child.stderr);
     const build = JSON.parse(await readFile(resolve(directory, 'dist/build-info.json'), 'utf8'));
     assert.equal(build.sourceCommit, null);
     assert.equal(build.sourceDirty, null);
     assert.equal(build.localMediaIncluded, false);
+    assert.equal(await readFile(resolve(directory, 'dist/web/app.js'), 'utf8'), 'const example = null;');
   } finally {
     assert.ok(directory.startsWith(validation + sep));
     await rm(directory, { recursive:true, force:true });

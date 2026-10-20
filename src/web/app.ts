@@ -23,6 +23,12 @@ let expiryTimer: ReturnType<typeof setTimeout> | undefined;
 const host = initHost();
 const appBase = new URL('.', import.meta.url);
 const apiUrl = (path: string) => new URL(`api${path}`, appBase).href;
+interface RecordedExample {
+  original:string; facts:Record<Field,string | null>; notes:string[]; recordedAt:string; imageDataUrl:string;
+  source:{author:string;title:string;url:string;license:string;licenseUrl:string};
+}
+const embeddedExample: unknown = '__CYBERCARE_READONLY_EXAMPLE__';
+const recordedExample = embeddedExample && typeof embeddedExample === 'object' ? embeddedExample as RecordedExample : null;
 class ExpiredWorkspace extends Error {}
 
 function requireCurrent(version: number) {
@@ -93,20 +99,41 @@ function fitFactEditors() {
   }
 }
 function renderSamplePreview() {
-  // Use the existing synthetic transcript; this is not a task or an export.
+  // Fixed examples only: never read the active upload, draft, or task here.
+  const recorded = el<HTMLSelectElement>('sample-example').value === 'recorded' ? recordedExample : null;
   const lines = sampleText.split(/\r?\n/);
   const values = Object.fromEntries((Object.entries(fields) as [Field, string][]).map(([key, label]) => {
     const line = lines.find(text => text.startsWith(`${label}：`) || text.startsWith(`${label}:`));
-    return [key, line?.slice(label.length + 1).trim() || '未知；示例未提供'];
+    return [key, (recorded ? recorded.facts[key] : line?.slice(label.length + 1).trim()) || (recorded ? '未知；存档未提供' : '未知；示例未提供')];
   })) as Record<Field, string>;
   el('sample-facts').replaceChildren(...(Object.entries(fields) as [Field, string][]).filter(([key]) => key !== 'title').flatMap(([key, label]) => {
     const term = document.createElement('dt'), value = document.createElement('dd');
     term.textContent = label; value.textContent = values[key]; return [term, value];
   }));
   el('sample-reading-title').textContent = values.title;
-  el('sample-original').textContent = sampleText;
-  el<HTMLImageElement>('sample-source-image').src = new URL('poster.svg', appBase).href;
-  el('sample-preview-status').textContent = '以下是合成材料的展示示例，没有创建任务或调用模型。';
+  const dateGuidance = fieldGuidance('time', recorded ? recorded.facts.time || '' : values.time);
+  el('sample-date-note').textContent = dateGuidance; el('sample-date-note').hidden = !dateGuidance;
+  el('sample-original').textContent = recorded?.original ?? sampleText;
+  const previewImage = el<HTMLImageElement>('sample-source-image');
+  previewImage.src = recorded?.imageDataUrl ?? new URL('poster.svg', appBase).href;
+  previewImage.alt = recorded ? `公开活动海报：${values.title}。完整转录在下方。` : '开发者原创合成阅读会海报，完整文字在下方转录。';
+  const credit = el('sample-source-credit');
+  credit.replaceChildren();
+  if (recorded) {
+    const sourceLink = document.createElement('a'), licenseLink = document.createElement('a');
+    sourceLink.href = recorded.source.url; sourceLink.textContent = recorded.source.title;
+    licenseLink.href = recorded.source.licenseUrl; licenseLink.textContent = recorded.source.license;
+    for (const link of [sourceLink, licenseLink]) { link.target = '_blank'; link.rel = 'noopener noreferrer'; }
+    credit.append(document.createTextNode(`${recorded.source.author} / `), sourceLink, document.createTextNode(' · '), licenseLink, document.createTextNode(' · 来源提供的缩略图，原样保留'));
+  } else credit.textContent = '开发者原创合成海报 · 非真实活动';
+  el('sample-disclosure').textContent = recorded
+    ? '公开材料的已有结果 · 本次仅展示，不调用模型、不创建任务。经过开发代理核对，非真人确认；活动和报名当前状态未核实。'
+    : '合成示例 · 只读预览。尚未检测、尚未人工确认，不能作为正式回执。';
+  const notes = recorded?.notes ?? (values.registration === '未知；示例未提供' ? ['示例未提供报名方式，确认前应保留未知。'] : []);
+  el('sample-notes').replaceChildren(...notes.map(note => { const item = document.createElement('li'); item.textContent = note; return item; }));
+  el('sample-preview-status').textContent = recorded
+    ? `识别存档：${new Date(recorded.recordedAt).toLocaleDateString('zh-CN')}。原图、转录和待核实事项供你对照；本次没有生成新任务或正式回执。`
+    : '以下是合成材料的展示示例，没有创建任务或调用模型。';
   el('sample-preview-content').hidden = false;
 }
 async function api<T>(path: string, method = 'GET', body?: unknown, key?: string): Promise<T> {
@@ -382,6 +409,7 @@ el('sample-source-image').addEventListener('error', () => {
 el('sample-source-image').addEventListener('load', () => {
   el('sample-source-image').hidden = false; el('sample-source-fallback').hidden = true;
 });
+el('sample-example').addEventListener('change', () => { if (fields) renderSamplePreview(); });
 async function init() {
   try {
     const config = await api<{ fields: Record<Field, string>; sampleText: string; provider: { live: boolean; limit: number; timeoutMs?: number | null; configError?: string | null }; contentEditing?: boolean; runtime?: { restartRequired:boolean | null } }>('/config'); fields = config.fields; sampleText = config.sampleText;
@@ -389,6 +417,9 @@ async function init() {
     modelTimeoutSeconds = Math.ceil((config.provider.timeoutMs ?? 30000) / 1000);
     contentEditing = config.contentEditing === true;
     el('content-editor').hidden = !contentEditing;
+    el('sample-example-picker').hidden = !recordedExample;
+    el<HTMLOptionElement>('sample-recorded-option').disabled = !recordedExample;
+    el<HTMLSelectElement>('sample-example').value = recordedExample ? 'recorded' : 'sample';
     renderSamplePreview();
     el('confirm-fields').replaceChildren(...(Object.entries(fields) as [Field, string][]).map(([key, name]) => {
       const label = document.createElement('label'); label.className = 'check'; const input = document.createElement('input'); input.type = 'checkbox'; input.id = `checked-${key}`; input.addEventListener('change', updateGates); label.append(input, document.createTextNode(`已核对${name}，或确认保留未知`)); return label;
