@@ -50,9 +50,10 @@ test('运行版本固定在启动构建；磁盘更新、缺失或损坏均不�
   const directory = await mkdtemp(resolve(validation,'runtime-build-'));
   await cp(resolve('dist'),resolve(directory,'dist'),{recursive:true,filter:path=>!path.startsWith(resolve('dist/web'))});
   const manifest = resolve(directory,'dist/build-info.json');
-  const first = {sourceCommit:'a'.repeat(40),sourceDirty:false,builtAt:'2026-10-20T00:00:00.000Z',localMediaIncluded:false};
-  // A rebuild of uncommitted code can retain the same commit; compare the build too.
-  const next = {...first,builtAt:'2026-10-20T00:01:00.000Z'};
+  const first = {sourceCommit:'a'.repeat(40),sourceDirty:false,builtAt:'2026-10-20T00:00:00.000Z',localMediaIncluded:false,applicationHash:'a'.repeat(64)};
+  const sameContent = {...first,sourceCommit:'b'.repeat(40),sourceDirty:true,builtAt:'2026-10-20T00:01:00.000Z'};
+  // Uncommitted application changes can retain the same commit, but change the content hash.
+  const next = {...first,builtAt:'2026-10-20T00:02:00.000Z',applicationHash:'c'.repeat(64)};
   await writeFile(manifest,JSON.stringify(first));
   const reservation = createServer(); reservation.listen(0,'127.0.0.1'); await once(reservation,'listening');
   const port = reservation.address().port; await new Promise(resolve=>reservation.close(resolve));
@@ -80,6 +81,10 @@ test('运行版本固定在启动构建；磁盘更新、缺失或损坏均不�
   try {
     await start();
     assert.deepEqual((await health()).build,first);
+    await writeFile(manifest,JSON.stringify(sameContent));
+    const metadataOnly = await health();
+    assert.deepEqual(metadataOnly.build,first); assert.deepEqual(metadataOnly.availableBuild,sameContent);
+    assert.equal(metadataOnly.restartRequired,false);
     await writeFile(manifest,JSON.stringify(next));
     const changed = await health();
     assert.deepEqual(changed.build,first);
@@ -88,6 +93,9 @@ test('运行版本固定在启动构建；磁盘更新、缺失或损坏均不�
     const config = await (await fetch(`${origin}/api/config`)).json();
     assert.deepEqual(config.runtime,changed);
     assert.equal(config.provider.requests,0);
+    const {applicationHash,...legacy}=first;
+    await writeFile(manifest,JSON.stringify(legacy)); assert.equal((await health()).restartRequired,null);
+    await writeFile(manifest,JSON.stringify({...first,applicationHash:'invalid'})); assert.equal((await health()).restartRequired,null);
     await writeFile(manifest,'{"secret":"must-not-be-returned"}');
     const invalid = await health();
     assert.deepEqual(invalid.build,first); assert.equal(invalid.availableBuild,null); assert.equal(invalid.restartRequired,null);

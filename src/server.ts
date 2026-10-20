@@ -17,7 +17,7 @@ const cookiePath = process.env.CYBERCARE_BASE_PATH || '/';
 if (!/^\/(?:[a-z0-9-]+\/)*$/.test(cookiePath)) throw new Error('CYBERCARE_BASE_PATH must be an absolute directory path.');
 const allowedHosts = [`127.0.0.1:${port}`, `localhost:${port}`, ...(publicOrigin ? [publicOrigin.host] : [])];
 const allowedOrigins = new Set([`http://127.0.0.1:${port}`, `http://localhost:${port}`, ...(publicOrigin ? [publicOrigin.origin] : [])]);
-const buildSchema = z.object({ sourceCommit:z.string().regex(/^[a-f0-9]{40}$/).nullable(), sourceDirty:z.boolean().nullable(), builtAt:z.string().datetime(), localMediaIncluded:z.boolean() });
+const buildSchema = z.object({ sourceCommit:z.string().regex(/^[a-f0-9]{40}$/).nullable(), sourceDirty:z.boolean().nullable(), builtAt:z.string().datetime(), localMediaIncluded:z.boolean(), applicationHash:z.string().regex(/^[a-f0-9]{64}$/).optional() });
 async function readBuild() {
   try {
     const parsed = buildSchema.safeParse(JSON.parse(await readFile(new URL('build-info.json', import.meta.url), 'utf8')));
@@ -29,7 +29,7 @@ const runningBuild = await readBuild();
 const startedAt = new Date().toISOString();
 async function runtimeInfo() {
   const availableBuild = await readBuild();
-  return { status:'ok', startedAt, build:runningBuild, availableBuild, restartRequired:runningBuild && availableBuild ? JSON.stringify(runningBuild) !== JSON.stringify(availableBuild) : null };
+  return { status:'ok', startedAt, build:runningBuild, availableBuild, restartRequired:runningBuild?.applicationHash && availableBuild?.applicationHash ? runningBuild.applicationHash !== availableBuild.applicationHash : null };
 }
 const provider = createProvider();
 const service = createTaskService(provider);
