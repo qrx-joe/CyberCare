@@ -15,6 +15,7 @@ let busy = false;
 let dirty = false;
 let contentEditing = false;
 let summarySources = false;
+let bodyReviewAvailable = false;
 let refreshTimePicker: (() => boolean) | undefined;
 let pendingCreation: { signature: string; key: string } | null = null;
 const drafts: Record<string, { text: string; source: string }> = {};
@@ -51,7 +52,7 @@ function clearWorkspace(keepMaterial = false) {
   for (const key of Object.keys(drafts)) delete drafts[key]; pendingCreation = null;
   if (retained) drafts.manual = { text: '', source: retained.source };
   el('poster-preview').hidden = true;
-  for (const id of ['fact-fields', 'original', 'summary', 'uncertainties', 'final-text', 'audit-output', 'task-meta', 'provider-label', 'feedback-status']) el(id).replaceChildren();
+  for (const id of ['fact-fields', 'original', 'summary', 'uncertainties', 'final-text', 'audit-output', 'task-meta', 'provider-label', 'feedback-status', 'body-review-list']) el(id).replaceChildren();
   for (const key of ['original', 'summary', 'description']) el<HTMLTextAreaElement>(`content-${key}`).value = '';
   el<HTMLSelectElement>('summary-mode').value = 'custom';
   el<HTMLDetailsElement>('content-editor').open = false;
@@ -236,6 +237,9 @@ function updateSummaryDraft() {
 }
 function updateGates() {
   updateSummaryDraft();
+  el('body-review').hidden = !bodyReviewAvailable || dirty || task?.status !== 'needs_review' || !task.bodyReview?.length;
+  el<HTMLButtonElement>('review-body').disabled = busy;
+  el('review-body').hidden = !contentEditing;
   const factEditors = el('fact-fields').querySelectorAll<HTMLTextAreaElement>('textarea');
   el('unknown-facts-help').hidden = task?.status !== 'needs_review' || factEditors.length !== 4 || [...factEditors].some(input => input.value.trim());
   for (const input of el('input-form').querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input,select,textarea')) input.disabled = busy || !!task;
@@ -301,6 +305,7 @@ image.addEventListener('change', () => {
 
 function render() {
   refreshTimePicker = undefined;
+  el('body-review-list').replaceChildren();
   if (task) retainUntil(Date.parse(task.expiresAt));
   host.setTask(task);
   el('task-controls').hidden = !task;
@@ -329,6 +334,11 @@ function render() {
   el('original').textContent = task.extraction.original;
   el('summary').textContent = `${task.extraction.summary}\n${task.extraction.description}`;
   const content = task.reviewedContent ?? task.extraction;
+  el('body-review-list').replaceChildren(...(task.bodyReview ?? []).map(hint => {
+    const item = document.createElement('li');
+    item.textContent = `${fields[hint.field]}：${hint.kind === 'unknown-retained' ? '当前保留未知。' : `当前填写为「${hint.current}」，正文未逐字定位。`}${hint.previous ? `正文仍含此前文字「${hint.previous}」。` : ''}相关修改依据：${hint.reason || '未记录，请核实。'}`;
+    return item;
+  }));
   for (const key of ['original', 'summary', 'description'] as const) el<HTMLTextAreaElement>(`content-${key}`).value = content[key];
   el<HTMLSelectElement>('summary-mode').value = task.summaryMode ?? 'custom';
   el('uncertainties').replaceChildren(...task.extraction.uncertainties.map(text => { const li = document.createElement('li'); li.textContent = text; return li; }));
@@ -445,7 +455,7 @@ el('edit-form').addEventListener('submit', event => {
     const values = Object.fromEntries(Object.keys(fields).map(k => [k, el<HTMLTextAreaElement>(`fact-${k}`).value]));
     const content = Object.fromEntries(['original', 'summary', 'description'].map(key => [key, el<HTMLTextAreaElement>(`content-${key}`).value]));
     task = await api<PublicTask>(`/tasks/${task.id}/edit`, 'POST', { revision: task.revision, values, reason, ...(contentEditing ? { content, ...(summarySources ? { summaryMode:el<HTMLSelectElement>('summary-mode').value } : {}) } : {}) });
-    render(); notice('已保存修改；旧确认与检测已失效，请重新检测。');
+    render(); notice(`已保存修改；旧确认与检测已失效，请重新检测。${task.bodyReview?.length && bodyReviewAvailable ? '字段修订与正文对照仍有提示，请查看后核实。' : ''}`);
   });
 });
 el('audit').addEventListener('click', () => void action(async () => {
@@ -457,6 +467,12 @@ el('audit').addEventListener('click', () => void action(async () => {
 }));
 for (const key of ['original', 'summary', 'description']) el(`content-${key}`).addEventListener('input', () => { dirty = true; clearChecks(); updateGates(); });
 el('summary-mode').addEventListener('change', () => { if (summarySources && task) { dirty = true; clearChecks(); updateGates(); } });
+el('review-body').addEventListener('click', () => {
+  checkExpiry();
+  if (!task || busy || !contentEditing) return;
+  el<HTMLDetailsElement>('content-editor').open = true;
+  el('content-original').focus();
+});
 el('review-material').addEventListener('click', () => {
   el('input-title').focus({ preventScroll: true });
   el('input-title').scrollIntoView({ block: 'start', behavior: 'auto' });
@@ -541,11 +557,12 @@ el('sample-source-image').addEventListener('load', () => {
 el('sample-example').addEventListener('change', () => { if (fields) renderSamplePreview(); });
 async function init() {
   try {
-    const config = await api<{ fields: Record<Field, string>; sampleText: string; provider: { live: boolean; limit: number; timeoutMs?: number | null; configError?: string | null }; contentEditing?: boolean; summarySources?: boolean; runtime?: { restartRequired:boolean | null } }>('/config'); fields = config.fields; sampleText = config.sampleText;
+    const config = await api<{ fields: Record<Field, string>; sampleText: string; provider: { live: boolean; limit: number; timeoutMs?: number | null; configError?: string | null }; contentEditing?: boolean; summarySources?: boolean; fieldBodyReview?: boolean; runtime?: { restartRequired:boolean | null } }>('/config'); fields = config.fields; sampleText = config.sampleText;
     showRuntimeWarning(config.runtime);
     modelTimeoutSeconds = Math.ceil((config.provider.timeoutMs ?? 30000) / 1000);
     contentEditing = config.contentEditing === true;
     summarySources = config.summarySources === true;
+    bodyReviewAvailable = config.fieldBodyReview === true;
     el('content-editor').hidden = !contentEditing;
     el('sample-example-picker').hidden = !recordedExample;
     el<HTMLOptionElement>('sample-recorded-option').disabled = !recordedExample;

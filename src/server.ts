@@ -89,7 +89,7 @@ export const server = createServer(async (req, res) => {
       // Each task still expires independently after 30 minutes.
       sessions.set(token, Date.now() + 30 * 60 * 1000);
       res.setHeader('Set-Cookie', `cybercare=${token}; HttpOnly; SameSite=Strict; Path=${cookiePath}; Max-Age=1800${publicOrigin && req.headers.host === publicOrigin.host ? '; Secure' : ''}`);
-      if (method === 'GET' && url.pathname === '/api/config') return json(res, 200, { fields: FIELDS, sampleText: SAMPLE_TEXT, provider: provider.info(), imageLimitMb: 2, ttlMinutes: 30, contentEditing: true, summarySources: true, runtime:await runtimeInfo() });
+      if (method === 'GET' && url.pathname === '/api/config') return json(res, 200, { fields: FIELDS, sampleText: SAMPLE_TEXT, provider: provider.info(), imageLimitMb: 2, ttlMinutes: 30, contentEditing: true, summarySources: true, fieldBodyReview: true, runtime:await runtimeInfo() });
       if (method === 'POST' && url.pathname === '/api/tasks') {
         const key = req.headers['idempotency-key'];
         if (typeof key !== 'string' || !/^[a-zA-Z0-9-]{8,80}$/.test(key)) throw new AppError(400, 'KEY_REQUIRED', '缺少有效请求编号。');

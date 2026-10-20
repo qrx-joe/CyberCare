@@ -62,3 +62,10 @@ test('字面比较不吞标点、不执行正则或HTML；差异与依据按纯�
  assert.equal(html.includes('<script>'),false);assert.equal(html.includes('<img src=x'),false);
  domain.editTask(task,2,{...task.values,location:'活动室.*'},'合成字面正则边界');assert.equal(domain.fieldBodyReview(task).length,1);
 }));
+
+test('旧离线阅读快照缺少修改历史时保持可读，不凭空增加修订提示',()=>fixture(task=>{
+ const snapshot={...task,changes:undefined};
+ assert.deepEqual(domain.fieldBodyReview(snapshot),[]);
+ assert.equal(domain.renderHtml(snapshot),domain.renderHtml(task));
+ assert.equal(domain.renderText(snapshot),domain.renderText(task));
+}));

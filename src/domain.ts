@@ -129,7 +129,7 @@ export function fieldBodyReview(task: Task): BodyReviewHint[] {
   const located = (value: string) => !!value.trim() && !!sourceSpan(body.normalize('NFC'), value.normalize('NFC'));
   const hints: BodyReviewHint[] = [];
   for (const field of fieldKeys) {
-    const change = [...task.changes].reverse().find(change => change.field === field);
+    const change = [...(task.changes ?? [])].reverse().find(change => change.field === field);
     if (!change && !bodyChanged) continue;
     const current = task.values[field];
     const previous = change?.before && located(change.before) ? change.before : undefined;
