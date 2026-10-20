@@ -157,6 +157,11 @@ function updateGates() {
   el('unknown-facts-help').hidden = task?.status !== 'needs_review' || factEditors.length !== 4 || [...factEditors].some(input => input.value.trim());
   for (const input of el('input-form').querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input,select,textarea')) input.disabled = busy || !!task;
   for (const input of el('edit-form').querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input,textarea')) input.disabled = busy;
+  const excerptSource = task?.reviewedContent?.original ?? task?.extraction?.original;
+  const excerptSourceChanged = contentEditing && el<HTMLTextAreaElement>('content-original').value !== excerptSource;
+  for (const button of el('fact-fields').querySelectorAll<HTMLButtonElement>('button[data-excerpt-field]')) {
+    button.disabled = busy || task?.status !== 'needs_review' || excerptSourceChanged || !!el<HTMLTextAreaElement>(`fact-${button.dataset.excerptField}`).value;
+  }
   const audited = !!task?.audit && task.audit.revision === task.revision && !task.audit.violations.some(v => ['serious', 'critical'].includes(v.impact || ''));
   const checked = fields && (Object.keys(fields) as Field[]).every(k => el<HTMLInputElement>(`checked-${k}`).checked) && el<HTMLInputElement>('confirm-content').checked;
   el<HTMLButtonElement>('confirm').disabled = busy || dirty || !audited || !checked;
@@ -259,7 +264,37 @@ function render() {
     };
     updateGuidance();
     input.addEventListener('input', () => { updateGuidance(); fitFactEditors(); dirty = true; clearChecks(); updateGates(); });
-    wrap.append(l, input, evidence, guidance); container.append(wrap);
+    wrap.append(l, input, evidence, guidance);
+    if (unlocatedQuote && !task.extraction.facts[key].value) {
+      const fragments = [...new Set(quote.split(/\r?\n/).map(fragment => fragment.trim()))]
+        .filter(fragment => fragment && fragment.length <= 500 && content.original.includes(fragment)).slice(0, 6);
+      if (fragments.length) {
+        const picker = document.createElement('details'); picker.id = `excerpt-${key}`; picker.className = 'fact-excerpts';
+        const toggle = document.createElement('summary'); toggle.textContent = '从原文选取片段';
+        const help = document.createElement('p'); help.id = `excerpt-help-${key}`;
+        help.textContent = '以下片段能在当前核对正文中逐字定位，未核实含义。仅填入空白草稿；正文有未保存修改时暂停选取。请对照原图、填写修改依据并保存。'
+          + (key === 'time' ? ' 还须区分活动日期、时段与提交截止。' : '');
+        const list = document.createElement('ul'), renderedId = task.id, renderedRevision = task.revision;
+        fragments.forEach((fragment, index) => {
+          const item = document.createElement('li'), text = document.createElement('p'), context = document.createElement('small'), button = document.createElement('button');
+          text.className = 'excerpt-text'; text.textContent = fragment;
+          const at = content.original.indexOf(fragment);
+          context.textContent = `上下文：${at > 24 ? '…' : ''}${content.original.slice(Math.max(0, at - 24), at + fragment.length + 24)}${at + fragment.length + 24 < content.original.length ? '…' : ''}`;
+          button.type = 'button'; button.textContent = '填入草稿'; button.dataset.excerptField = key;
+          button.setAttribute('aria-label', `填入草稿：${label}片段 ${index + 1}`); button.setAttribute('aria-describedby', help.id);
+          button.addEventListener('click', () => {
+            checkExpiry();
+            if (!button.isConnected || busy || task?.id !== renderedId || task.revision !== renderedRevision || task.status !== 'needs_review' || input.value
+              || (contentEditing && el<HTMLTextAreaElement>('content-original').value !== content.original) || !content.original.includes(fragment)) return;
+            input.value = fragment; input.dispatchEvent(new Event('input', { bubbles: true }));
+            notice(`${label}已填入待核对草稿，尚未保存。请核实用途、填写修改依据并保存，再检测和确认。`); input.focus();
+          });
+          item.append(text, context, button); list.append(item);
+        });
+        picker.append(toggle, help, list); wrap.append(picker);
+      }
+    }
+    container.append(wrap);
   }
   fitFactEditors();
   dirty = false; clearChecks();

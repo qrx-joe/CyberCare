@@ -181,6 +181,12 @@ input[type=checkbox] { flex: none; width: 1.2rem; height: 1.2rem; margin: .2rem 
 .fact-guidance { padding: .65rem .75rem; border-left: 3px solid #8d5a3a; background: #fff0dc; color: #6d432b; font-size: .8rem; }
 #fact-fields small { display: block; color: var(--muted); font-size: .75rem; margin-top: .25rem; overflow-wrap: anywhere; }
 #fact-fields textarea { resize: none; }
+.fact-excerpts { font-size: .8rem; }
+.fact-excerpts ul { padding-left: 1.2rem; }
+.fact-excerpts li { padding-block: .5rem; }
+.fact-excerpts .excerpt-text { white-space: pre-wrap; overflow-wrap: anywhere; margin-block: .4rem; }
+.fact-excerpts small { white-space: pre-wrap; }
+.fact-excerpts button { min-height: 44px; margin-top: .5rem; font-size: .8rem; }
 .audit-box { margin: 1.5rem 0; padding: 1rem 0; border-block: 1px solid var(--soft-line); }
 .audit-box h3 { margin-top: 0; }
 pre { font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; margin: .8rem 0; }
