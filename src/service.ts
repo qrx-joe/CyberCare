@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { AppError, fieldKeys, type Audit, type Input, type PublicTask, type Task } from './contracts.js';
-import { hash, SAMPLE_TEXT } from './domain.js';
+import { hash, SAMPLE_TEXT, fieldBodyReview } from './domain.js';
 import { createProvider } from './provider.js';
 import { imageSize } from 'image-size';
 
@@ -35,7 +35,11 @@ export function createTaskService(provider = createProvider(), ttlMs = 30 * 60 *
   }
   return {
     get, prune,
-    public(task: Task): PublicTask { const { controller: _controller, session: _session, ...rest } = task; return rest; },
+    public(task: Task): PublicTask {
+      const { controller: _controller, session: _session, ...rest } = task;
+      const hints = fieldBodyReview(task);
+      return { ...rest, ...(hints.length ? { bodyReview:hints } : {}) };
+    },
     create(input: Input, session: string, key: string) {
       prune();
       validateImage(input.image);

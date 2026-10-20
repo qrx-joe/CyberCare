@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { AppError, FIELDS, extractionSchema, factSchema, timeReferenceSchema, contentSchema, summaryModeSchema, fieldKeys, type Extraction, type Field, type Task, type ReviewedContent, type SummaryMode } from './contracts.js';
+import { AppError, FIELDS, extractionSchema, factSchema, timeReferenceSchema, contentSchema, summaryModeSchema, fieldKeys, type Extraction, type Field, type Task, type ReviewedContent, type SummaryMode, type BodyReviewHint } from './contracts.js';
 
 export const SAMPLE_TEXT = '活动名称：一起读书 · 社区公益阅读会\n活动时间：2026 年 10 月 24 日 14:00—16:00\n活动地点：示例社区活动室二楼\n活动说明：带一本喜欢的书，一起分享阅读。\n费用：免费\n说明：这是开发者编写的合成演示素材，不是真实活动。';
 export const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
@@ -120,6 +120,36 @@ export function contentForTask(task: Task): ReviewedContent {
   const content = task.reviewedContent ?? task.extraction!;
   return task.summaryMode === 'fields' ? { ...content, summary:fieldSummary(task.values) } : content;
 }
+/** Literal review assistance after edits, never a semantic or image-truth check. */
+export function fieldBodyReview(task: Task): BodyReviewHint[] {
+  const body = task.reviewedContent?.original ?? task.extraction?.original;
+  if (!body || !task.values || !task.extraction) return [];
+  const bodyChanged = body !== task.extraction.original;
+  const bodyChange = [...(task.contentChanges ?? [])].reverse().find(change => change.field === 'original');
+  const located = (value: string) => !!value.trim() && !!sourceSpan(body.normalize('NFC'), value.normalize('NFC'));
+  const hints: BodyReviewHint[] = [];
+  for (const field of fieldKeys) {
+    const change = [...task.changes].reverse().find(change => change.field === field);
+    if (!change && !bodyChanged) continue;
+    const current = task.values[field];
+    const previous = change?.before && located(change.before) ? change.before : undefined;
+    if (!current) {
+      if (previous) hints.push({ field, kind:'unknown-retained', current, previous, reason:change!.reason });
+      continue;
+    }
+    const lines = current.split(/\r?\n/);
+    const typedTimes = field === 'time' && lines.every(line => /^(活动日期\/时段|报名截止|提交截止|用途待核实)[：:]\s*\S/.test(line));
+    const parts = typedTimes ? lines.map(line => line.replace(/^[^：:]+[：:]\s*/, '')) : [current];
+    if (parts.every(located)) continue;
+    hints.push({ field, kind:'not-located', current, ...(previous ? { previous } : {}), reason:change?.reason ?? bodyChange?.reason ?? '' });
+  }
+  return hints;
+}
+function bodyReviewMessage(hint: BodyReviewHint): string {
+  const current = hint.kind === 'unknown-retained' ? '当前保留未知。' : `当前填写为「${hint.current}」，正文未逐字定位。`;
+  return `${FIELDS[hint.field]}：${current}${hint.previous ? `正文仍含此前文字「${hint.previous}」。` : ''}相关修改依据：${hint.reason || '未记录，请核实。'}`;
+}
+const bodyReviewHelp = '以下提示来自已保存修订的文字对照，不判定事实对错。请结合修改依据核实；没有提示也不代表内容正确。';
 export function confirmTask(task: Task, revision: number) {
   requireDraft(task, revision);
   if (!task.audit || task.audit.revision !== revision || task.audit.htmlHash !== hash(renderHtml(task))) throw new AppError(409, 'AUDIT_REQUIRED', '请先检测当前版本的无障碍 HTML。');
@@ -145,13 +175,15 @@ export function renderText(task: Task): string {
   const e = task.extraction!;
   const content = contentForTask(task);
   const dateNote = dateReviewNote(task);
-  return `海报文字版\n${fieldKeys.map(k => `${FIELDS[k]}：${task.values![k] || '未知，请向活动方核实'}`).join('\n')}${dateNote ? `\n\n${dateNote}` : ''}\n\n内容概述\n${content.summary}\n\n图像说明\n${content.description}\n\n完整文字（可人工修订）\n${content.original}\n\n提取时的不确定项（修订记录另见回执）\n${e.uncertainties.join('\n') || '无额外标记；仍需人工核对。'}\n\n来源：${task.source.note}\n处理路径：${task.source.mode}\n原始提取与人工修订依据保存在证据 JSON 中；四项信息与完整文字需分别核对。\n本文件不代表 WCAG 认证、真实用户验证或机构采用。`;
+  const bodyReview = fieldBodyReview(task);
+  return `海报文字版\n${fieldKeys.map(k => `${FIELDS[k]}：${task.values![k] || '未知，请向活动方核实'}`).join('\n')}${dateNote ? `\n\n${dateNote}` : ''}${bodyReview.length ? `\n\n字段修订与正文对照\n${bodyReviewHelp}\n${bodyReview.map(bodyReviewMessage).join('\n')}` : ''}\n\n内容概述\n${content.summary}\n\n图像说明\n${content.description}\n\n完整文字（可人工修订）\n${content.original}\n\n提取时的不确定项（修订记录另见回执）\n${e.uncertainties.join('\n') || '无额外标记；仍需人工核对。'}\n\n来源：${task.source.note}\n处理路径：${task.source.mode}\n原始提取与人工修订依据保存在证据 JSON 中；四项信息与完整文字需分别核对。\n本文件不代表 WCAG 认证、真实用户验证或机构采用。`;
 }
 /** One controlled template is both audited and exported, with all content escaped. */
 export function renderHtml(task: Task): string {
   const e = task.extraction!;
   const content = contentForTask(task);
   const dateNote = dateReviewNote(task);
+  const bodyReview = fieldBodyReview(task);
   const sections = [['facts', '活动信息'], ['summary', '内容概述'], ['description', '图像说明'], ['full-text', '完整文字'], ['uncertainties', '提取时的不确定项'], ['source', '来源与处理说明']] as const;
   const mode = { sample: '内置合成样例，非 AI 识别', manual: '人工转录，非 AI 识别', live: 'AI 提取，需操作者核对' }[task.source.mode];
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(task.values!.title || '活动名称未知')} · 海报文字版</title><style>
@@ -163,7 +195,7 @@ nav{border-block:1px solid #bac5b9;margin:1.5rem 0;padding:.5rem 0}nav ul{displa
 @media print{nav{display:none}body{margin:0;max-width:none;color:#000;background:#fff}}
 </style></head><body><main><h1>海报文字版</h1>
 <nav aria-label="阅读目录"><p>跳到你需要的内容</p><ul>${sections.map(([id, label]) => `<li><a href="#${id}">${label}</a></li>`).join('')}</ul></nav>
-<section><h2 id="facts" tabindex="-1">活动信息</h2><dl>${fieldKeys.map(k => `<dt>${FIELDS[k]}</dt><dd${task.values![k].includes('\n') ? ' style="white-space:pre-wrap"' : ''}>${escapeHtml(task.values![k] || '未知，请向活动方核实')}</dd>`).join('')}</dl>${dateNote ? `<p id="date-review" class="caution"><strong>${escapeHtml(dateNote)}</strong></p>` : ''}</section>
+<section><h2 id="facts" tabindex="-1">活动信息</h2><dl>${fieldKeys.map(k => `<dt>${FIELDS[k]}</dt><dd${task.values![k].includes('\n') ? ' style="white-space:pre-wrap"' : ''}>${escapeHtml(task.values![k] || '未知，请向活动方核实')}</dd>`).join('')}</dl>${dateNote ? `<p id="date-review" class="caution"><strong>${escapeHtml(dateNote)}</strong></p>` : ''}${bodyReview.length ? `<aside class="caution" aria-labelledby="field-body-review-title"><h3 id="field-body-review-title">字段修订与正文对照</h3><p>${bodyReviewHelp}</p><ul>${bodyReview.map(hint => `<li>${escapeHtml(bodyReviewMessage(hint))}</li>`).join('')}</ul></aside>` : ''}</section>
 <section><h2 id="summary" tabindex="-1">内容概述</h2><pre>${escapeHtml(content.summary || '未提供概述。')}</pre></section>
 <section><h2 id="description" tabindex="-1">图像说明</h2><pre>${escapeHtml(content.description || '未提供图像说明。')}</pre></section>
 <section><h2 id="full-text" tabindex="-1">完整文字</h2><pre>${escapeHtml(content.original)}</pre></section>

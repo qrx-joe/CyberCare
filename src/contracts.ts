@@ -73,4 +73,7 @@ export interface Task {
   error?: string;
   controller: AbortController;
 }
-export type PublicTask = Omit<Task, 'session' | 'controller'>;
+export interface BodyReviewHint {
+  field: Field; kind: 'not-located' | 'unknown-retained'; current: string; previous?: string; reason: string;
+}
+export type PublicTask = Omit<Task, 'session' | 'controller'> & { bodyReview?: BodyReviewHint[] };
