@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { AppError, FIELDS, extractionSchema, factSchema, timeReferenceSchema, contentSchema, fieldKeys, type Extraction, type Field, type Task, type ReviewedContent } from './contracts.js';
+import { AppError, FIELDS, extractionSchema, factSchema, timeReferenceSchema, contentSchema, summaryModeSchema, fieldKeys, type Extraction, type Field, type Task, type ReviewedContent, type SummaryMode } from './contracts.js';
 
 export const SAMPLE_TEXT = '活动名称：一起读书 · 社区公益阅读会\n活动时间：2026 年 10 月 24 日 14:00—16:00\n活动地点：示例社区活动室二楼\n活动说明：带一本喜欢的书，一起分享阅读。\n费用：免费\n说明：这是开发者编写的合成演示素材，不是真实活动。';
 export const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
@@ -85,23 +85,40 @@ export function requireDraft(task: Task, revision: number) {
   if (task.status !== 'needs_review' || !task.values || !task.extraction) throw new AppError(409, 'NOT_REVIEWABLE', '当前任务不可修改或确认。');
   if (task.revision !== revision) throw new AppError(409, 'REVISION_CONFLICT', '草稿版本已变化，请重新加载后核对。');
 }
-export function editTask(task: Task, revision: number, values: Record<Field, string>, reason: string, content?: ReviewedContent) {
+export function editTask(task: Task, revision: number, values: Record<Field, string>, reason: string, content?: ReviewedContent, summaryMode?: SummaryMode) {
   requireDraft(task, revision);
   const reviewed = content === undefined ? undefined : contentSchema.parse(content);
+  const requestedMode = summaryMode === undefined ? undefined : summaryModeSchema.parse(summaryMode);
+  const previous = task.reviewedContent ?? task.extraction!;
+  // Old clients can still explicitly revise summary text without a mode field.
+  const nextMode = requestedMode ?? (task.summaryMode === 'fields' && reviewed && reviewed.summary !== previous.summary ? 'custom' : task.summaryMode);
   for (const key of fieldKeys) if (values[key].trim() !== task.values![key]) {
     task.changes.push({ at: new Date().toISOString(), field: key, before: task.values![key], after: values[key].trim(), reason });
   }
   task.values = Object.fromEntries(fieldKeys.map(key => [key, values[key].trim()])) as Record<Field, string>;
   if (reviewed) {
-    const previous = task.reviewedContent ?? task.extraction!;
     task.contentChanges ??= [];
     for (const key of ['original', 'summary', 'description'] as const) if (reviewed[key] !== previous[key]) {
       task.contentChanges.push({ at: new Date().toISOString(), field: key, before: previous[key], after: reviewed[key], reason });
     }
     task.reviewedContent = reviewed;
   }
+  if (nextMode !== undefined) {
+    const before = task.summaryMode ?? 'custom';
+    if (before !== nextMode) { task.summarySourceChanges ??= []; task.summarySourceChanges.push({ at:new Date().toISOString(), before, after:nextMode, reason }); }
+    task.summaryMode = nextMode;
+  }
   task.revision++;
   delete task.audit;
+}
+
+/** A field template adds no organizer/sponsor narrative; fields still need image review. */
+export function fieldSummary(values: Task['values']): string {
+  return `根据四项活动信息整理；仍须对照原图核实。\n${fieldKeys.map(key => `${FIELDS[key]}：${values?.[key] || '未知，请向活动方核实'}`).join('\n')}`;
+}
+export function contentForTask(task: Task): ReviewedContent {
+  const content = task.reviewedContent ?? task.extraction!;
+  return task.summaryMode === 'fields' ? { ...content, summary:fieldSummary(task.values) } : content;
 }
 export function confirmTask(task: Task, revision: number) {
   requireDraft(task, revision);
@@ -126,14 +143,14 @@ function dateReviewNote(task: Task): string {
 
 export function renderText(task: Task): string {
   const e = task.extraction!;
-  const content = task.reviewedContent ?? e;
+  const content = contentForTask(task);
   const dateNote = dateReviewNote(task);
   return `海报文字版\n${fieldKeys.map(k => `${FIELDS[k]}：${task.values![k] || '未知，请向活动方核实'}`).join('\n')}${dateNote ? `\n\n${dateNote}` : ''}\n\n内容概述\n${content.summary}\n\n图像说明\n${content.description}\n\n完整文字（可人工修订）\n${content.original}\n\n提取时的不确定项（修订记录另见回执）\n${e.uncertainties.join('\n') || '无额外标记；仍需人工核对。'}\n\n来源：${task.source.note}\n处理路径：${task.source.mode}\n原始提取与人工修订依据保存在证据 JSON 中；四项信息与完整文字需分别核对。\n本文件不代表 WCAG 认证、真实用户验证或机构采用。`;
 }
 /** One controlled template is both audited and exported, with all content escaped. */
 export function renderHtml(task: Task): string {
   const e = task.extraction!;
-  const content = task.reviewedContent ?? e;
+  const content = contentForTask(task);
   const dateNote = dateReviewNote(task);
   const sections = [['facts', '活动信息'], ['summary', '内容概述'], ['description', '图像说明'], ['full-text', '完整文字'], ['uncertainties', '提取时的不确定项'], ['source', '来源与处理说明']] as const;
   const mode = { sample: '内置合成样例，非 AI 识别', manual: '人工转录，非 AI 识别', live: 'AI 提取，需操作者核对' }[task.source.mode];

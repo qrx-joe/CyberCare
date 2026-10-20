@@ -104,7 +104,7 @@ export const server = createServer(async (req, res) => {
       const task = service.get(id, token);
       if (method === 'GET' && !action) return json(res, 200, service.public(task));
       if (method === 'POST' && action === 'edit') {
-        const input = editSchema.parse(await body(req)); editTask(task, input.revision, input.values, input.reason, input.content);
+        const input = editSchema.parse(await body(req)); editTask(task, input.revision, input.values, input.reason, input.content, input.summaryMode);
       } else if (method === 'POST' && action === 'audit') {
         const input = z.object({ revision: z.number().int() }).parse(await body(req));
         if (!task.extraction) throw new AppError(409, 'NO_RESULT', '任务还没有可检测的草稿。');

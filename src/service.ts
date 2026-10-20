@@ -56,6 +56,7 @@ export function createTaskService(provider = createProvider(), ttlMs = 30 * 60 *
         source: { mode: input.mode, note: input.sourceNote, permission: input.mode === 'sample' ? '开发者原创合成素材' : '提交者声明有权处理；未经独立核实', sha256: hash(input.image ? Buffer.from(input.image.data, 'base64') : input.mode === 'sample' ? SAMPLE_TEXT : input.text!), fileName: input.image?.name ?? null },
         changes: [], controller: new AbortController(),
       };
+      if (input.mode === 'live') task.summaryMode = 'fields';
       tasks.set(task.id, task);
       keys.set(idemKey, { fingerprint, id: task.id });
       // Local single-process work only. Abort/deletion/expiry must win over late results.

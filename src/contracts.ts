@@ -37,7 +37,9 @@ export const contentSchema = z.object({
   description: z.string().max(1500),
 });
 export type ReviewedContent = z.infer<typeof contentSchema>;
-export const editSchema = z.object({ revision: z.number().int(), values: valuesSchema, reason: z.string().trim().min(1).max(700), content: contentSchema.optional() });
+export const summaryModeSchema = z.enum(['fields', 'custom']);
+export type SummaryMode = z.infer<typeof summaryModeSchema>;
+export const editSchema = z.object({ revision: z.number().int(), values: valuesSchema, reason: z.string().trim().min(1).max(700), content: contentSchema.optional(), summaryMode: summaryModeSchema.optional() });
 export const reviewSchema = z.object({
   revision: z.number().int(),
   confirmed: z.object({ title: z.literal(true), time: z.literal(true), location: z.literal(true), registration: z.literal(true) }),
@@ -61,6 +63,8 @@ export interface Task {
   source: { mode: Input['mode']; note: string; permission: string; sha256: string; fileName: string | null };
   extraction?: Extraction; values?: Record<Field, string>;
   reviewedContent?: ReviewedContent;
+  summaryMode?: SummaryMode;
+  summarySourceChanges?: { at: string; before: SummaryMode; after: SummaryMode; reason: string }[];
   contentChanges?: { at: string; field: keyof ReviewedContent; before: string; after: string; reason: string }[];
   changes: { at: string; field: Field; before: string; after: string; reason: string }[];
   audit?: Audit; review?: { at: string; revision: number; fields: Field[]; contentConfirmed: true };
