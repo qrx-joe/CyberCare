@@ -25,6 +25,7 @@ let expiresAt = 0;
 let expiryTimer: ReturnType<typeof setTimeout> | undefined;
 const host = initHost();
 const appBase = new URL('.', import.meta.url);
+const imageReview = initImageReview();
 const apiUrl = (path: string) => new URL(`api${path}`, appBase).href;
 interface RecordedExample {
   original:string; facts:Record<Field,string | null>; notes:string[]; recordedAt:string; imageDataUrl:string;
@@ -51,7 +52,7 @@ function clearWorkspace(keepMaterial = false) {
   transcript.value = ''; source.value = ''; el<HTMLInputElement>('permission').checked = false;
   for (const key of Object.keys(drafts)) delete drafts[key]; pendingCreation = null;
   if (retained) drafts.manual = { text: '', source: retained.source };
-  el('poster-preview').hidden = true;
+  el('poster-preview').hidden = true; el('poster-preview').removeAttribute('src'); imageReview.sync();
   for (const id of ['fact-fields', 'original', 'summary', 'uncertainties', 'final-text', 'audit-output', 'task-meta', 'provider-label', 'feedback-status', 'body-review-list']) el(id).replaceChildren();
   for (const key of ['original', 'summary', 'description']) el<HTMLTextAreaElement>(`content-${key}`).value = '';
   el<HTMLSelectElement>('summary-mode').value = 'custom';
@@ -64,6 +65,60 @@ function clearWorkspace(keepMaterial = false) {
 function checkExpiry() {
   if (!expiresAt || Date.now() < expiresAt) return;
   clearWorkspace(); error(); notice('资料已到期，当前页面的用户文字、图片预览和任务已清空。可以重新开始。');
+}
+
+function initImageReview() {
+  const preview = el<HTMLImageElement>('poster-preview'), viewport = el('poster-viewport'), canvas = el('poster-canvas');
+  const controls = el('image-zoom-controls'), status = el('image-zoom-status'), review = el('review-image');
+  const zoomIn = el<HTMLButtonElement>('image-zoom-in'), zoomOut = el<HTMLButtonElement>('image-zoom-out'), fit = el<HTMLButtonElement>('image-zoom-fit');
+  let zoom = 1;
+  function refresh(reset = false) {
+    const hasSource = !preview.hidden && preview.hasAttribute('src');
+    const available = !preview.hidden && !!preview.getAttribute('src') && preview.complete && preview.naturalWidth > 0;
+    el('source-image-review').hidden = !hasSource && el('image-review-error').hidden;
+    el('image-zoom-help').hidden = !hasSource;
+    controls.hidden = !available; review.hidden = !available || !task?.extraction;
+    viewport.hidden = preview.hidden || !preview.hasAttribute('src');
+    zoomIn.disabled = !available || zoom === 8; zoomOut.disabled = fit.disabled = !available || zoom === 1;
+    if (!available) { canvas.style.width = canvas.style.height = preview.style.width = ''; status.textContent = ''; return; }
+    const width = viewport.clientWidth, height = viewport.clientHeight;
+    if (!width || !height) return;
+    const centerX = canvas.clientWidth ? (viewport.scrollLeft + width / 2) / canvas.clientWidth : .5;
+    const centerY = canvas.clientHeight ? (viewport.scrollTop + height / 2) / canvas.clientHeight : .5;
+    const ratio = Math.min(width / preview.naturalWidth, height / preview.naturalHeight) * zoom;
+    const imageWidth = preview.naturalWidth * ratio, imageHeight = preview.naturalHeight * ratio;
+    preview.style.width = `${imageWidth}px`;
+    canvas.style.width = `${Math.max(width, imageWidth)}px`; canvas.style.height = `${Math.max(height, imageHeight)}px`;
+    viewport.scrollLeft = reset ? 0 : centerX * canvas.clientWidth - width / 2;
+    viewport.scrollTop = reset ? 0 : centerY * canvas.clientHeight - height / 2;
+    const label = zoom === 1 ? '适合预览框' : `${zoom} 倍查看`;
+    if (status.textContent !== label) status.textContent = label;
+  }
+  function changeZoom(next: number) {
+    const version = workspaceVersion; checkExpiry();
+    if (version !== workspaceVersion || preview.hidden || !preview.complete || !preview.naturalWidth) return;
+    zoom = Math.max(1, Math.min(8, next)); refresh(zoom === 1);
+  }
+  zoomIn.addEventListener('click', () => changeZoom(zoom * 2));
+  zoomOut.addEventListener('click', () => changeZoom(zoom / 2));
+  fit.addEventListener('click', () => changeZoom(1));
+  review.addEventListener('click', () => {
+    const version = workspaceVersion; checkExpiry(); refresh();
+    if (version !== workspaceVersion || review.hidden) return;
+    if (zoom === 1) changeZoom(2);
+    viewport.focus(); viewport.scrollIntoView({ block: 'center', behavior: 'auto' });
+  });
+  preview.addEventListener('load', () => { checkExpiry(); refresh(true); });
+  preview.addEventListener('error', () => {
+    if (!preview.getAttribute('src') || !preview.complete || preview.naturalWidth) return;
+    preview.hidden = true; preview.removeAttribute('src'); el('image-review-error').hidden = false; refresh();
+  });
+  new ResizeObserver(() => refresh(zoom === 1)).observe(viewport);
+  return { refresh, sync() {
+    zoom = 1; el('image-review-error').hidden = true;
+    if (preview.hidden) preview.removeAttribute('src');
+    refresh(true);
+  } };
 }
 document.addEventListener('visibilitychange', checkExpiry);
 window.addEventListener('pageshow', checkExpiry);
@@ -284,9 +339,11 @@ function setupMode() {
   el('mode-help').textContent = sample ? '原创合成海报用于验证流程，不代表真实公益活动或模型效果。' : live ? `图片将发送给已配置的 StepFun 视觉模型。AI 提取不等于事实核实。最多等待 ${modelTimeoutSeconds} 秒，可取消，无自动重试。` : '图片用于对照并在服务端检查，不发送给模型；草稿来自你粘贴的转录文字，不是识别结果。';
   el<HTMLInputElement>('permission').checked = false;
   const preview = el<HTMLImageElement>('poster-preview');
-  preview.src = sample ? new URL('poster.svg', appBase).href : imageUrl || '';
+  if (sample || imageUrl) preview.src = sample ? new URL('poster.svg', appBase).href : imageUrl!;
+  else preview.removeAttribute('src');
   preview.hidden = !sample && !imageUrl;
   preview.alt = sample ? '合成阅读会海报，完整文字在下方转录框。' : '待核对的用户海报；请同时提供并核对文字版本。';
+  imageReview.sync();
   previousMode = mode.value;
 }
 mode.addEventListener('change', setupMode);
@@ -301,9 +358,11 @@ image.addEventListener('change', () => {
   const preview = el<HTMLImageElement>('poster-preview');
   preview.hidden = !imageUrl;
   if (imageUrl) preview.src = imageUrl;
+  imageReview.sync();
 });
 
 function render() {
+  imageReview.refresh();
   refreshTimePicker = undefined;
   el('body-review-list').replaceChildren();
   if (task) retainUntil(Date.parse(task.expiresAt));

@@ -59,7 +59,11 @@
         <label for="mode">处理方式</label><select id="mode"><option value="sample">内置合成样例 · 无需网络，非 AI</option><option value="manual">上传海报 + 人工转录 · 非 OCR / AI</option><option value="live" disabled>真实视觉识别 · 未配置</option></select>
         <p id="mode-help" class="muted">原创合成海报用于验证流程，不代表真实公益活动或模型效果。</p>
         <div id="file-group" hidden><label for="image">海报图片（PNG / JPEG / WebP，最多 2 MB）</label><input id="image" type="file" accept="image/png,image/jpeg,image/webp"><p class="muted">请勿上传身份证、手机号等个人资料、密码或验证码。</p></div>
-        <img id="poster-preview" src="./poster.svg" alt="合成海报：一起读书，社区公益阅读会。完整文字位于下方转录框。">
+        <div id="source-image-review" class="source-image-review">
+          <div id="image-zoom-controls" class="image-zoom-controls" role="group" aria-label="原图查看" hidden><button id="image-zoom-in" type="button" aria-controls="poster-viewport">放大原图</button><button id="image-zoom-out" type="button" aria-controls="poster-viewport">缩小原图</button><button id="image-zoom-fit" type="button" aria-controls="poster-viewport">适合预览框</button><output id="image-zoom-status" role="status"></output></div>
+          <div id="poster-viewport" tabindex="0" role="region" aria-label="原图局部滚动查看" aria-describedby="image-zoom-help"><div id="poster-canvas"><img id="poster-preview" src="./poster.svg" alt="合成海报：一起读书，社区公益阅读会。完整文字位于下方转录框。"></div></div>
+          <p id="image-zoom-help" class="muted">放大后可滚动查看；聚焦图片区域后，也可用方向键移动。放大不会补全模糊细节，看不清的仍保留未知。</p><p id="image-review-error" class="muted" hidden>原图暂时无法显示。可以重新选图，或先保留转录中的待核实内容。</p>
+        </div>
         <label for="transcript">海报转录文字</label><textarea id="transcript" rows="8" readonly></textarea><p id="text-help" class="muted">标签解析支持“活动名称：”“活动时间：”“活动地点：”“报名方式：”；不匹配的字段保留为未知。</p>
         <label for="source-note">材料来源 / 使用依据</label><input id="source-note" maxlength="500" value="开发者原创合成演示海报；非真实活动" required>
         <label class="check"><input id="permission" type="checkbox" required><span>我确认有权处理该材料；真实识别模式会将图片发给 StepFun。供应商留存策略尚未核实。</span></label>
@@ -74,7 +78,7 @@
       <div id="draft" hidden>
         <p id="provider-label" class="callout"></p>
         <div id="unknown-facts-help" class="fact-guidance" hidden><strong>四项活动信息目前均为未知。</strong><p>可以保留未知，不用猜答案。请对照原图或转录；若材料没有活动文字或选错了图片，可删除当前任务后重新提交。补充信息时请注明已核实的来源。</p><button id="review-material" type="button">回到材料对照</button></div>
-        <details><summary>查看原始转录、整理内容与不确定项</summary><h3>原始转录（可能有识别错误）</h3><pre id="original"></pre><h3>初次提取概述 / 图像说明（保留用于对照）</h3><p id="summary"></p><ul id="uncertainties"></ul></details>
+        <details><summary>查看原始转录、整理内容与不确定项</summary><h3>原始转录（可能有识别错误）</h3><pre id="original"></pre><h3>初次提取概述 / 图像说明（保留用于对照）</h3><p id="summary"></p><ul id="uncertainties"></ul><button id="review-image" type="button" aria-controls="poster-viewport" hidden>放大对照原图</button></details>
         <p id="summary-source" class="muted" hidden></p>
         <form id="edit-form"><div id="fact-fields"></div>
           <aside id="body-review" class="callout" aria-labelledby="body-review-title" hidden><h3 id="body-review-title">字段修订与正文对照</h3><p id="body-review-help">以下是已保存版本的文字对照，不判定事实对错。请更正正文或核实保留差异的依据；没有提示也不代表内容正确。编辑草稿后，保存才会更新提示。</p><ul id="body-review-list"></ul><button id="review-body" type="button" aria-describedby="body-review-help">打开完整文字核对</button></aside>

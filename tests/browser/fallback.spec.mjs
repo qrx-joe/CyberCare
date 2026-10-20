@@ -85,7 +85,7 @@ test('已取消识别可转人工，保留材料不延长原期限，到期仍�
   await expect(page.locator('#transcript')).toHaveValue('');
   await expect(page.locator('#source-note')).toHaveValue('');
   expect(await page.locator('#image').evaluate(input => input.files.length)).toBe(0);
-  expect(await page.locator('#poster-preview').getAttribute('src')).not.toMatch(/^blob:/);
+  expect(await page.locator('#poster-preview').getAttribute('src')).toBeNull();
 });
 
 test('转人工期间资料到期，晚到的删除响应不能恢复图片或来源', async ({ page }) => {
