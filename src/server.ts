@@ -40,6 +40,7 @@ const staticPaths: Record<string, [string, string]> = {
   '/app.js': ['web/app.js', 'text/javascript; charset=utf-8'],
   '/style.css': ['web/style.css', 'text/css; charset=utf-8'],
   '/poster.svg': ['web/poster.svg', 'image/svg+xml'],
+  '/human-patch-primary.svg': ['web/human-patch-primary.svg', 'image/svg+xml'],
   '/host.js': ['web/host.js', 'text/javascript; charset=utf-8'],
   '/reference-poster.jpg': ['web/reference-poster.jpg', 'image/jpeg'],
 };

@@ -37,8 +37,8 @@ button.primary:hover:enabled { background: #c8f13d; }
   align-items: center; justify-content: space-between; gap: 1rem 2rem; border-bottom: 2px solid var(--line);
 }
 .brand { display: flex; align-items: center; gap: .75rem; text-decoration: none; font-size: 1.2rem; font-weight: 850; }
-.mark { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border: 2px solid var(--line); border-radius: 50%; background: var(--lime); font: 900 1.2rem/1 system-ui, sans-serif; transform: rotate(-9deg); }
-.brand-sub { display: block; color: var(--muted); font: .6rem/1.8 ui-monospace, monospace; letter-spacing: .06em; font-weight: 550; }
+.brand-logo { display: block; width: 44px; height: 44px; flex: none; }
+.brand-sub { display: block; color: var(--muted); font-size: .7rem; line-height: 1.8; letter-spacing: .06em; font-weight: 550; }
 nav { display: flex; flex-wrap: wrap; gap: 1.75rem; align-items: center; max-width: 100%; font-size: .85rem; font-weight: 750; }
 nav a { display: inline-flex; align-items: center; gap: .65rem; min-height: 44px; text-decoration: none; }
 nav a:hover { text-decoration: underline; text-decoration-thickness: 2px; }
@@ -231,7 +231,7 @@ h3 { font-size: 1.1rem; }
   .notice-bar > div > span:last-child { display: none; }
   .header-inner { padding: 1rem 1.1rem; gap: .5rem 1rem; }
   .brand { font-size: 1.05rem; }
-  .brand-sub { font-size: .55rem; }
+  .brand-sub { font-size: .7rem; }
   .header-tools { gap: .4rem; }
   .tag { display: none; }
   nav { order: 3; width: 100%; justify-content: space-between; font-size: .8rem; gap: .5rem 1rem; }

@@ -5,7 +5,7 @@ import { relative } from 'node:path';
 import { loadReadonlyExample } from './readonly-example.mjs';
 const includeLocalMedia = process.env.CYBERCARE_INCLUDE_LOCAL_MEDIA !== '0';
 await mkdir('dist/web', { recursive: true });
-for (const name of ['index.html', 'style.css', 'poster.svg']) {
+for (const name of ['index.html', 'style.css', 'poster.svg', 'human-patch-primary.svg']) {
   await cp(`src/web/${name}`, `dist/web/${name}`);
 }
 // User-supplied reference stays local; the app has a text fallback without it.

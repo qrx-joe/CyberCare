@@ -11,7 +11,7 @@ test('源码包在其他 Git 仓库内构建时，不借用外层提交作为自
   try {
     await mkdir(resolve(directory, 'src/web'), { recursive:true });
     await mkdir(resolve(directory, 'dist/web'), { recursive:true });
-    for (const [name, content] of Object.entries({ 'index.html':'<!doctype html><title>合成构建测试</title>', 'style.css':'', 'poster.svg':'<svg xmlns="http://www.w3.org/2000/svg"/>' })) {
+    for (const [name, content] of Object.entries({ 'index.html':'<!doctype html><title>合成构建测试</title>', 'style.css':'', 'poster.svg':'<svg xmlns="http://www.w3.org/2000/svg"/>', 'human-patch-primary.svg':'<svg xmlns="http://www.w3.org/2000/svg"><title>合成标识</title></svg>' })) {
       await writeFile(resolve(directory, 'src/web', name), content);
     }
     await writeFile(resolve(directory, 'dist/web/host.js'), 'const atlas = "__CYBERCARE_AVATAR_ATLAS__";');

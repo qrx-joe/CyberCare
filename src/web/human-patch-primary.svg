@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 100 100"
+     width="512"
+     height="512"
+     role="img"
+     aria-labelledby="logo-title">
+  <title id="logo-title">赛博公益 · 人类补丁 Logo</title>
+
+  <rect
+    x="3" y="3"
+    width="94" height="94"
+    rx="24"
+    fill="#D8FF57"
+    stroke="#191B19"
+    stroke-width="3"
+  />
+
+  <path
+    d="M29 24H23Q16 24 16 31V69Q16 76 23 76H29
+       M71 24H77Q84 24 84 31V69Q84 76 77 76H71"
+    fill="none"
+    stroke="#191B19"
+    stroke-width="7"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <circle
+    cx="50" cy="32"
+    r="7.5"
+    fill="#191B19"
+  />
+
+  <path
+    d="M50 49L38 73M50 49L62 73"
+    fill="none"
+    stroke="#191B19"
+    stroke-width="10"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
