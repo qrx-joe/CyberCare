@@ -74,6 +74,7 @@
     <section class="panel result-panel" aria-labelledby="result-title"><p class="panel-label">REVIEW / 对照、修订与确认</p><div class="panel-heading"><h2 id="result-title" tabindex="-1">核对与回执</h2></div>
       <div id="empty"><span class="empty-symbol" aria-hidden="true">Aa</span><h3>让信息从图片里走出来</h3><p>先生成草稿，再逐项核对。<br>未知信息可以保留，不需要猜一个答案。</p><p class="muted">自动检测通过 ≠ 事实准确<br>人工确认 ≠ 用户验证或机构采用</p></div>
       <div id="task-controls" hidden><p id="task-meta" class="muted"></p><div class="actions"><button id="cancel" type="button" hidden>取消处理</button><button id="delete" type="button">删除当前任务</button></div></div>
+      <div id="task-read-recovery" class="callout" hidden><p id="task-read-help">任务状态读取中断，处理可能仍在进行。重新读取只查询当前任务，不会重新提交图片或调用模型；资料仍按原时间到期。</p><button id="retry-task" type="button" aria-describedby="task-read-help">重新读取任务状态</button></div>
       <div id="manual-fallback" class="callout" hidden><h3>识别没完成，也可以继续</h3><p id="manual-fallback-help">删除本次失败或已取消的任务，保留本页图片和来源供你转录。不再调用模型，本页材料原到期时间不变；已发出的请求可能仍计费。</p><button id="use-manual" type="button" aria-describedby="manual-fallback-help">保留图片，改用人工转录</button></div>
       <div id="draft" hidden>
         <p id="provider-label" class="callout"></p>

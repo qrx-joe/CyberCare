@@ -12,6 +12,7 @@ let task: PublicTask | null = null;
 let fields: Record<Field, string>;
 let imageUrl: string | undefined;
 let busy = false;
+let taskReadInterrupted = false;
 let dirty = false;
 let contentEditing = false;
 let summarySources = false;
@@ -47,7 +48,7 @@ function retainUntil(deadline: number) {
 }
 function clearWorkspace(keepMaterial = false) {
   const retained = keepMaterial ? { source: source.value, deadline: expiresAt } : null;
-  workspaceVersion++; clearTimeout(expiryTimer); expiresAt = 0; task = null; busy = false; dirty = false;
+  workspaceVersion++; clearTimeout(expiryTimer); expiresAt = 0; task = null; busy = false; dirty = false; taskReadInterrupted = false;
   if (!retained) { image.value = ''; if (imageUrl) URL.revokeObjectURL(imageUrl); imageUrl = undefined; }
   transcript.value = ''; source.value = ''; el<HTMLInputElement>('permission').checked = false;
   for (const key of Object.keys(drafts)) delete drafts[key]; pendingCreation = null;
@@ -292,6 +293,8 @@ function updateSummaryDraft() {
 }
 function updateGates() {
   updateSummaryDraft();
+  el('task-read-recovery').hidden = !taskReadInterrupted || task?.status !== 'processing';
+  el<HTMLButtonElement>('retry-task').disabled = busy;
   el('body-review').hidden = !bodyReviewAvailable || dirty || task?.status !== 'needs_review' || !task.bodyReview?.length;
   el<HTMLButtonElement>('review-body').disabled = busy;
   el('review-body').hidden = !contentEditing;
@@ -502,9 +505,19 @@ async function poll(id: string) {
     }
     if (task?.id === id && task.status === 'needs_review') { notice('草稿已生成。请对照来源核对，未知字段可留空。'); el('result-title').focus(); }
   } catch (e) {
-    if (task?.id === id) { error(e instanceof Error ? e.message : '读取失败'); notice('读取任务失败；可以删除当前任务，或重新打开页面。'); }
+    if (task?.id === id) {
+      taskReadInterrupted = true;
+      error(e instanceof Error ? e.message : '读取失败'); notice('任务状态读取中断，处理可能仍在进行。可以重新读取当前任务，无需重新提交材料。'); updateGates();
+    }
   }
 }
+el('retry-task').addEventListener('click', () => void action(async () => {
+  if (!task || task.status !== 'processing' || !taskReadInterrupted) return;
+  task = await api<PublicTask>(`/tasks/${task.id}`);
+  taskReadInterrupted = false; render();
+  if (task.status === 'processing') { notice('已恢复读取，任务仍在处理。'); void poll(task.id); }
+  else if (task.status === 'needs_review') { notice('草稿已取回。请对照来源核对，未知字段可留空。'); el('result-title').focus(); }
+}));
 el('edit-form').addEventListener('submit', event => {
   event.preventDefault(); void action(async () => {
     if (!task) return;
