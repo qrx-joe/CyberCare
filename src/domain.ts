@@ -24,6 +24,24 @@ function sourceSpan(source: string, quote: string): string | null {
   return source.match(new RegExp(pattern, 'u'))?.[0] ?? null;
 }
 
+// Narrow an overbroad multi-line quotation only after every fragment is found in
+// source order. The value must fit wholly inside one fragment; never join values.
+function supportingFragment(source: string, quote: string, value: string): string | null {
+  const fragments = quote.split(/\r?\n/).filter(fragment => fragment.trim());
+  if (fragments.length < 2) return null;
+  let cursor = 0, supporting: string | null = null;
+  for (const fragment of fragments) {
+    const remaining = source.slice(cursor), span = sourceSpan(remaining, fragment);
+    if (!span) return null;
+    cursor += remaining.indexOf(span) + span.length;
+    if (sourceSpan(span, value)) {
+      if (supporting !== null) return null;
+      supporting = span;
+    }
+  }
+  return supporting;
+}
+
 /** Evidence substring checks are consistency checks, not proof of image truth. */
 export function normalizeExtraction(value: unknown): Extraction {
   const data = extractionSchema.parse(value);
@@ -31,11 +49,16 @@ export function normalizeExtraction(value: unknown): Extraction {
     const fact = data.facts[key];
     if (fact.value && /^(未知|无法辨认|无法确认|未提供|不清楚|\[无法辨认\])$/.test(fact.value.trim())) fact.value = null;
     if (fact.value) {
-      const evidence = sourceSpan(data.original, fact.evidence);
+      let evidence = sourceSpan(data.original, fact.evidence);
+      const narrowed = !evidence;
+      if (!evidence) evidence = supportingFragment(data.original, fact.evidence, fact.value);
       const locatedValue = evidence ? sourceSpan(evidence, fact.value) : null;
       if (evidence && locatedValue) {
         const located = factSchema.safeParse({ value: locatedValue, evidence });
-        if (located.success) { fact.value = located.data.value; fact.evidence = located.data.evidence; }
+        if (located.success) {
+          fact.value = located.data.value; fact.evidence = located.data.evidence;
+          if (narrowed) data.uncertainties.push(`${FIELDS[key]}的模型引文包含不连续片段；已仅保留完整包含提取值的原文片段作为依据，仍须对照原图核实语义。`);
+        }
         else {
           data.uncertainties.push(`${FIELDS[key]}的原文跨度超出当前字段长度范围，已置为未知，请人工核对。`);
           fact.value = null;
