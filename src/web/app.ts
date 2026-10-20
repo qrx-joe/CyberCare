@@ -14,6 +14,7 @@ let imageUrl: string | undefined;
 let busy = false;
 let dirty = false;
 let contentEditing = false;
+let summarySources = false;
 let refreshTimePicker: (() => boolean) | undefined;
 let pendingCreation: { signature: string; key: string } | null = null;
 const drafts: Record<string, { text: string; source: string }> = {};
@@ -52,6 +53,7 @@ function clearWorkspace(keepMaterial = false) {
   el('poster-preview').hidden = true;
   for (const id of ['fact-fields', 'original', 'summary', 'uncertainties', 'final-text', 'audit-output', 'task-meta', 'provider-label', 'feedback-status']) el(id).replaceChildren();
   for (const key of ['original', 'summary', 'description']) el<HTMLTextAreaElement>(`content-${key}`).value = '';
+  el<HTMLSelectElement>('summary-mode').value = 'custom';
   el<HTMLDetailsElement>('content-editor').open = false;
   el<HTMLInputElement>('edit-reason').value = ''; el<HTMLSelectElement>('feedback').value = ''; clearChecks(); render();
   previousMode = null; mode.value = retained ? 'manual' : 'sample'; setupMode(); updateGates();
@@ -215,7 +217,25 @@ async function api<T>(path: string, method = 'GET', body?: unknown, key?: string
   }
   return data as T;
 }
+function updateSummaryDraft() {
+  const supported = contentEditing && summarySources;
+  const hasContent = !!task?.values;
+  const fromFields = supported && hasContent && el<HTMLSelectElement>('summary-mode').value === 'fields';
+  el('summary-mode-controls').hidden = !supported;
+  el('custom-summary-label').hidden = fromFields;
+  el('content-summary').hidden = fromFields;
+  el('field-summary-label').hidden = !fromFields;
+  el('field-summary-preview').hidden = !fromFields;
+  el('field-summary-preview').textContent = fromFields
+    ? `根据四项活动信息整理；仍须对照原图核实。\n${(Object.keys(fields) as Field[]).map(key => `${fields[key]}：${el<HTMLTextAreaElement>(`fact-${key}`).value || '未知，请向活动方核实'}`).join('\n')}`
+    : '';
+  el('summary-source').hidden = !supported || !hasContent;
+  el('summary-source').textContent = supported && hasContent
+    ? `导出概述：${fromFields ? '根据当前四项信息生成，仍须对照原图核实。' : '使用下方概述草稿，仍须人工核对。'}可在正文修订中选择来源。`
+    : '';
+}
 function updateGates() {
+  updateSummaryDraft();
   const factEditors = el('fact-fields').querySelectorAll<HTMLTextAreaElement>('textarea');
   el('unknown-facts-help').hidden = task?.status !== 'needs_review' || factEditors.length !== 4 || [...factEditors].some(input => input.value.trim());
   for (const input of el('input-form').querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input,select,textarea')) input.disabled = busy || !!task;
@@ -310,6 +330,7 @@ function render() {
   el('summary').textContent = `${task.extraction.summary}\n${task.extraction.description}`;
   const content = task.reviewedContent ?? task.extraction;
   for (const key of ['original', 'summary', 'description'] as const) el<HTMLTextAreaElement>(`content-${key}`).value = content[key];
+  el<HTMLSelectElement>('summary-mode').value = task.summaryMode ?? 'custom';
   el('uncertainties').replaceChildren(...task.extraction.uncertainties.map(text => { const li = document.createElement('li'); li.textContent = text; return li; }));
   const container = el('fact-fields');
   container.replaceChildren();
@@ -423,7 +444,7 @@ el('edit-form').addEventListener('submit', event => {
     if (!reason) throw new Error('请填写修改依据。');
     const values = Object.fromEntries(Object.keys(fields).map(k => [k, el<HTMLTextAreaElement>(`fact-${k}`).value]));
     const content = Object.fromEntries(['original', 'summary', 'description'].map(key => [key, el<HTMLTextAreaElement>(`content-${key}`).value]));
-    task = await api<PublicTask>(`/tasks/${task.id}/edit`, 'POST', { revision: task.revision, values, reason, ...(contentEditing ? { content } : {}) });
+    task = await api<PublicTask>(`/tasks/${task.id}/edit`, 'POST', { revision: task.revision, values, reason, ...(contentEditing ? { content, ...(summarySources ? { summaryMode:el<HTMLSelectElement>('summary-mode').value } : {}) } : {}) });
     render(); notice('已保存修改；旧确认与检测已失效，请重新检测。');
   });
 });
@@ -435,6 +456,7 @@ el('audit').addEventListener('click', () => void action(async () => {
   render(); notice('检测完成。请查看问题与人工检查项，再逐项确认。');
 }));
 for (const key of ['original', 'summary', 'description']) el(`content-${key}`).addEventListener('input', () => { dirty = true; clearChecks(); updateGates(); });
+el('summary-mode').addEventListener('change', () => { if (summarySources && task) { dirty = true; clearChecks(); updateGates(); } });
 el('review-material').addEventListener('click', () => {
   el('input-title').focus({ preventScroll: true });
   el('input-title').scrollIntoView({ block: 'start', behavior: 'auto' });
@@ -519,10 +541,11 @@ el('sample-source-image').addEventListener('load', () => {
 el('sample-example').addEventListener('change', () => { if (fields) renderSamplePreview(); });
 async function init() {
   try {
-    const config = await api<{ fields: Record<Field, string>; sampleText: string; provider: { live: boolean; limit: number; timeoutMs?: number | null; configError?: string | null }; contentEditing?: boolean; runtime?: { restartRequired:boolean | null } }>('/config'); fields = config.fields; sampleText = config.sampleText;
+    const config = await api<{ fields: Record<Field, string>; sampleText: string; provider: { live: boolean; limit: number; timeoutMs?: number | null; configError?: string | null }; contentEditing?: boolean; summarySources?: boolean; runtime?: { restartRequired:boolean | null } }>('/config'); fields = config.fields; sampleText = config.sampleText;
     showRuntimeWarning(config.runtime);
     modelTimeoutSeconds = Math.ceil((config.provider.timeoutMs ?? 30000) / 1000);
     contentEditing = config.contentEditing === true;
+    summarySources = config.summarySources === true;
     el('content-editor').hidden = !contentEditing;
     el('sample-example-picker').hidden = !recordedExample;
     el<HTMLOptionElement>('sample-recorded-option').disabled = !recordedExample;
