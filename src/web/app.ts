@@ -99,14 +99,13 @@ function renderSamplePreview() {
     const line = lines.find(text => text.startsWith(`${label}：`) || text.startsWith(`${label}:`));
     return [key, line?.slice(label.length + 1).trim() || '未知；示例未提供'];
   })) as Record<Field, string>;
-  el('sample-facts').replaceChildren(...(Object.entries(fields) as [Field, string][]).flatMap(([key, label]) => {
+  el('sample-facts').replaceChildren(...(Object.entries(fields) as [Field, string][]).filter(([key]) => key !== 'title').flatMap(([key, label]) => {
     const term = document.createElement('dt'), value = document.createElement('dd');
     term.textContent = label; value.textContent = values[key]; return [term, value];
   }));
   el('sample-reading-title').textContent = values.title;
-  el('sample-reading-time').textContent = `${fields.time}：${values.time}`;
-  el('sample-reading-location').textContent = `${fields.location}：${values.location}`;
   el('sample-original').textContent = sampleText;
+  el<HTMLImageElement>('sample-source-image').src = new URL('poster.svg', appBase).href;
   el('sample-preview-status').textContent = '以下是合成材料的展示示例，没有创建任务或调用模型。';
   el('sample-preview-content').hidden = false;
 }
@@ -371,6 +370,17 @@ el('check-runtime').addEventListener('click', async () => {
     showRuntimeWarning(response.ok ? await response.json() : undefined);
   } catch { showRuntimeWarning(); }
   finally { button.disabled = false; }
+});
+for (const id of ['hero-example', 'nav-example']) el(id).addEventListener('click', event => {
+  event.preventDefault(); el<HTMLDetailsElement>('sample-preview').open = true;
+  el('sample-preview-toggle').focus({ preventScroll: true });
+  el('sample-preview').scrollIntoView({ block: 'start', behavior: 'auto' });
+});
+el('sample-source-image').addEventListener('error', () => {
+  el('sample-source-image').hidden = true; el('sample-source-fallback').hidden = false;
+});
+el('sample-source-image').addEventListener('load', () => {
+  el('sample-source-image').hidden = false; el('sample-source-fallback').hidden = true;
 });
 async function init() {
   try {

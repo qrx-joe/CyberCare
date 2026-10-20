@@ -1,6 +1,34 @@
 import { test, expect } from '@playwright/test';
 import { readFile, writeFile } from 'node:fs/promises';
 
+test('首屏整理前后入口展示源图，保持未保存的核对草稿与任务不变', async ({page,context}) => {
+  const mutations=[];
+  page.on('request',request=>{if(new URL(request.url()).pathname.startsWith('/api/tasks')&&request.method()!=='GET')mutations.push(request.method());});
+  await page.goto('/');await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.locator('#mode').selectOption('manual');
+  await page.locator('#transcript').fill('活动名称：合成草稿隔离检查');
+  await page.locator('#source-note').fill('开发者原创合成材料；只读入口回归');
+  await page.locator('#permission').check();await page.locator('#create').click();
+  await expect(page.locator('#draft')).toBeVisible();
+  const id=(await page.locator('#task-meta').textContent()).match(/[a-f0-9-]{36}/)[0];
+  await page.locator('#fact-location').fill('尚未保存的合成场地');
+  const before=mutations.length;
+  await page.locator('#hero-example').focus();await page.keyboard.press('Enter');
+  await expect(page.locator('#sample-preview')).toHaveAttribute('open','');
+  await expect(page.locator('#sample-preview-toggle')).toBeFocused();
+  await expect(page.locator('#sample-source-image')).toBeVisible();
+  expect(await page.locator('#sample-source-image').evaluate(img=>img.complete&&img.naturalWidth>0)).toBe(true);
+  await expect(page.locator('#sample-reading-title')).toContainText('一起读书');
+  await expect(page.locator('#fact-location')).toHaveValue('尚未保存的合成场地');
+  await expect(page.locator('#mode')).toHaveValue('manual');
+  await expect(page.locator('#audit')).toBeDisabled();
+  expect(mutations.length).toBe(before);
+  const task=await(await context.request.get(`/api/tasks/${id}`)).json();
+  expect(task.revision).toBe(1);expect(task.values.location).toBe('');expect(task.provider.requests).toBe(0);
+  await page.locator('#sample-to-form').click();await expect(page.locator('#input-title')).toBeFocused();
+  await page.locator('#delete').click();await expect(page.locator('#empty')).toBeVisible();
+});
+
 test('只读示例可键盘展开，不创建任务、检测或导出，不覆盖人工草稿', async ({ page }) => {
   const requests = [];
   page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/tasks')) requests.push(request.method()); });
