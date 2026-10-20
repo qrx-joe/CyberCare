@@ -53,6 +53,8 @@ npm.cmd run dev
 
 仅在需要真实图片提取时，将 `.env.example` 复制为本地 `.env`，在本机填写 `STEPFUN_API_KEY`、`STEPFUN_BASE_URL`、`STEPFUN_MODEL`，重启服务。密钥不要发送到聊天或写入源码。选择账号实际可用的视觉模型；本项目不猜测模型 ID。
 
+若按上方以 `MODEL_REQUEST_LIMIT=0` 启动，真实入口仍不能发起请求；准备获准的有限测试时，先声明该批上限，再在启动终端显式将此变量调整到该上限并重启。不要用无限调用或反复重启绕过预算。
+
 中国站按请求计费 API 使用 `https://api.stepfun.com/v1`，Step Plan 套餐使用 `https://api.stepfun.com/step_plan/v1`，见[官方 Provider 源码](https://github.com/stepfun-ai/Step-Code/blob/main/packages/providers/src/step-provider/index.ts)。按实际资源选择地址，不把套餐额度当作普通 API 余额；分别查询所选地址的 `/models` 并核对图片能力。列表返回模型不等于该账号已获准推理。不会在请求被拒后自动回落到另一计费地址。
 
 配置存在只会启用入口，不表示中文海报质量或供应商数据策略已经验证。适配器基于 StepFun 的[官方图像调用示例](https://github.com/stepfun-ai/Step-3.7-Flash#52-text-and-image-input-example)，模型选择另核对了[官方 Step 5 图片提取示例](https://platform.stepfun.com/cookbook/step-5-vision-structured)。10/18 在必要前置条件处理后，文字探针与合成海报各 1 次请求成功；旧失败记录保留在 [验证记录](doc/stepfun-validation-20261018.md)。已有服务不会自动重读 `.env`，需要在保留现有任务的前提下安排重启或另用端口。
