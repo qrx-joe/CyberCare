@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { AppError, FIELDS, extractionSchema, factSchema, contentSchema, fieldKeys, type Extraction, type Field, type Task, type ReviewedContent } from './contracts.js';
+import { AppError, FIELDS, extractionSchema, factSchema, timeReferenceSchema, contentSchema, fieldKeys, type Extraction, type Field, type Task, type ReviewedContent } from './contracts.js';
 
 export const SAMPLE_TEXT = '活动名称：一起读书 · 社区公益阅读会\n活动时间：2026 年 10 月 24 日 14:00—16:00\n活动地点：示例社区活动室二楼\n活动说明：带一本喜欢的书，一起分享阅读。\n费用：免费\n说明：这是开发者编写的合成演示素材，不是真实活动。';
 export const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
@@ -70,6 +70,14 @@ export function normalizeExtraction(value: unknown): Extraction {
     }
     if (!fact.value) data.uncertainties.push(`${FIELDS[key]}未知：原文未提供、未标注或无法可靠识别；不可自行补全。`);
   }
+  if (data.timeReferences) data.timeReferences = data.timeReferences.flatMap((reference, index) => {
+    const evidence = sourceSpan(data.original, reference.evidence);
+    const value = evidence ? sourceSpan(evidence, reference.value) : null;
+    const located = evidence && value ? timeReferenceSchema.safeParse({ ...reference, value, evidence }) : null;
+    if (located?.success) return [located.data];
+    data.uncertainties.push(`时间条目 ${index + 1} 缺少长度合规且连续可定位的原文依据，未纳入时间建议。`);
+    return [];
+  });
   return data;
 }
 

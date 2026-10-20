@@ -7,11 +7,18 @@ export type Field = keyof typeof FIELDS;
 export type ReasoningEffort = 'low' | 'medium' | 'high';
 export const fieldKeys = Object.keys(FIELDS) as Field[];
 export const factSchema = z.object({ value: z.string().max(500).nullable(), evidence: z.string().max(700) });
+export const timeReferenceSchema = z.object({
+  kind: z.enum(['event', 'registration-deadline', 'submission-deadline', 'unknown']),
+  value: z.string().min(1).max(500), evidence: z.string().min(1).max(700),
+});
+export type TimeReference = z.infer<typeof timeReferenceSchema>;
+export type TimeKind = TimeReference['kind'];
 export const extractionSchema = z.object({
   original: z.string().min(1).max(12000),
   summary: z.string().max(1500),
   description: z.string().max(1500),
   facts: z.object({ title: factSchema, time: factSchema, location: factSchema, registration: factSchema }),
+  timeReferences: z.array(timeReferenceSchema).max(8).optional(),
   uncertainties: z.array(z.string().max(700)).max(30),
 });
 export type Extraction = z.infer<typeof extractionSchema>;
