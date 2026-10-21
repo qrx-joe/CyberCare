@@ -31,6 +31,7 @@ const apiUrl = (path: string) => new URL(`api${path}`, appBase).href;
 interface RecordedExample {
   original:string; facts:Record<Field,string | null>; notes:string[]; recordedAt:string; imageDataUrl:string;
   source:{author:string;title:string;url:string;license:string;licenseUrl:string};
+  provider?:{model:string;promptVersion:string;manualFieldEdits:number};
 }
 const embeddedExample: unknown = '__CYBERCARE_READONLY_EXAMPLE__';
 const recordedExample = embeddedExample && typeof embeddedExample === 'object' ? embeddedExample as RecordedExample : null;
@@ -248,8 +249,11 @@ function renderSamplePreview() {
     for (const link of [sourceLink, licenseLink]) { link.target = '_blank'; link.rel = 'noopener noreferrer'; }
     credit.append(document.createTextNode(`${recorded.source.author} / `), sourceLink, document.createTextNode(' · '), licenseLink, document.createTextNode(' · 来源提供的缩略图，原样保留'));
   } else credit.textContent = '开发者原创合成海报 · 非真实活动';
+  const edits = recorded?.provider?.manualFieldEdits;
   el('sample-disclosure').textContent = recorded
-    ? '公开材料的已有结果 · 本次仅展示，不调用模型、不创建任务。经过开发代理核对，非真人确认；活动和报名当前状态未核实。'
+    ? recorded.provider
+      ? `AI 识别的已有结果 · StepFun ${recorded.provider.model}，提示词 ${recorded.provider.promptVersion}；${edits === 0 ? '四项字段均为模型输出，未人工改写' : `其中 ${edits} 项字段经人工修订`}。本次仅展示，不调用模型、不创建任务；非真人确认，活动和报名当前状态未核实。`
+      : '公开材料的已有结果 · 本次仅展示，不调用模型、不创建任务。经过开发代理核对，非真人确认；活动和报名当前状态未核实。'
     : '合成示例 · 只读预览。尚未检测、尚未人工确认，不能作为正式回执。';
   const notes = recorded?.notes ?? (values.registration === '未知；示例未提供' ? ['示例未提供报名方式，确认前应保留未知。'] : []);
   el('sample-notes').replaceChildren(...notes.map(note => { const item = document.createElement('li'); item.textContent = note; return item; }));

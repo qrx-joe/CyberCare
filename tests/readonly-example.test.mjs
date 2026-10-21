@@ -28,6 +28,15 @@ test('可选示例缺失时不造数据，已有合法包只输出允许的展�
   assert.equal(result.imageFile,undefined);assert.equal(result.imageSha256,undefined);
   assert.deepEqual(Object.keys(result).sort(),['facts','imageDataUrl','notes','original','recordedAt','source']);
 }));
+test('可选模型来源原样输出，格式不合法时拒绝',async()=>fixture(async(root,directory)=>{
+  const provider={model:'synthetic-model',promptVersion:'synthetic-v1',manualFieldEdits:0};
+  await writeFile(resolve(directory,'poster-comparison.json'),JSON.stringify({...sample(),provider}));
+  assert.deepEqual((await loadReadonlyExample(root)).provider,provider);
+  for(const bad of [{...provider,manualFieldEdits:5},{...provider,usage:1},{...provider,model:''}]){
+    await writeFile(resolve(directory,'poster-comparison.json'),JSON.stringify({...sample(),provider:bad}));
+    await assert.rejects(()=>loadReadonlyExample(root),/只读示例数据或图片无效/);
+  }
+}));
 test('未知字段、伪造正文值和不受信任的来源链接在构建前拒绝',async()=>fixture(async(root,directory)=>{
   const inputs=[
     {...sample(),usage:{total_tokens:1}},

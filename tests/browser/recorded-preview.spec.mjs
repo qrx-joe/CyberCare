@@ -7,6 +7,7 @@ const fixture={original:'合成存档示例\n10月24日 13:00\n<script>alert(1)<
   facts:{title:'合成存档示例',time:'10月24日 13:00',location:'<script>alert(1)</script>',registration:'指引已知'},
   notes:['入口目标未核实','合成说明 <img src=x onerror=alert(1)>'],recordedAt:'2026-01-01T00:00:00.000Z',
   source:{author:'Synthetic fixture',title:'Synthetic_test.png',url:'https://commons.wikimedia.org/wiki/File:Synthetic_test.png',license:'CC BY 4.0',licenseUrl:'https://creativecommons.org/licenses/by/4.0/'},
+  provider:{model:'synthetic-model',promptVersion:'synthetic-v1',manualFieldEdits:1},
   imageDataUrl:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4AWJiYGBgAAAAAP//XRcpzQAAAAZJREFUAwAADwADJDd96QAAAABJRU5ErkJggg=='};
 async function embedded(page,value){
   await page.route('**/app.js',async route=>{
@@ -29,6 +30,8 @@ test('已有结果明确标识存档与未知，切换不写任务、不覆盖�
   await page.locator('#hero-example').click();await expect(page.locator('#sample-example')).toHaveValue('recorded');
   await expect(page.locator('#sample-reading-title')).toHaveText('合成存档示例');
   await expect(page.locator('#sample-disclosure')).toContainText('已有结果');await expect(page.locator('#sample-disclosure')).toContainText('非真人确认');
+  await expect(page.locator('#sample-disclosure')).toContainText('AI 识别');await expect(page.locator('#sample-disclosure')).toContainText('synthetic-model');
+  await expect(page.locator('#sample-disclosure')).toContainText('其中 1 项字段经人工修订');
   await expect(page.locator('#sample-preview-status')).toContainText('识别存档');await expect(page.locator('#sample-date-note')).toContainText('年份');
   await expect(page.locator('#sample-facts')).toContainText('<script>alert(1)</script>');
   await expect(page.locator('#sample-notes')).toContainText('<img src=x onerror=alert(1)>');

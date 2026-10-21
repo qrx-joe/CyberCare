@@ -20,6 +20,9 @@ const schema = z.object({
   recordedAt: z.string().datetime(),
   source: z.object({ author:z.string().min(1).max(120), title:z.string().min(1).max(200), url:commonsPage,
     license:z.literal('CC BY 4.0'), licenseUrl:z.literal('https://creativecommons.org/licenses/by/4.0/') }).strict(),
+  // Optional provenance so the page can say which model produced the archived fields.
+  provider: z.object({ model:z.string().min(1).max(80), promptVersion:z.string().min(1).max(80),
+    manualFieldEdits:z.number().int().min(0).max(4) }).strict().optional(),
 }).strict();
 
 function requireInside(parent, target) {
@@ -49,7 +52,7 @@ export async function loadReadonlyExample(projectRoot) {
     const data = bytes.toString('base64');
     validateImage({ name:input.imageFile, mime, data });
     return { original:input.original, facts:input.facts, notes:input.notes, recordedAt:input.recordedAt,
-      source:input.source, imageDataUrl:`data:${mime};base64,${data}` };
+      source:input.source, imageDataUrl:`data:${mime};base64,${data}`, ...(input.provider ? { provider:input.provider } : {}) };
   } catch {
     // Avoid echoing local file contents or arbitrary parse/validation values.
     throw new Error('只读示例数据或图片无效，请检查本地示例包。');
