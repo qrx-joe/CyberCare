@@ -77,7 +77,7 @@
     <aside class="desk-side" aria-label="海报核对流程"><p class="eyebrow">ONE SMALL ACTION</p><p class="desk-code" aria-hidden="true">一张<br>海报。</p><ol class="steps" aria-label="处理流程"><li id="step-input" aria-current="step"><span>01</span>提交材料</li><li id="step-review"><span>02</span>对照核对</li><li id="step-export"><span>03</span>确认导出</li></ol><p class="desk-note"><strong>没写的，不替它编。</strong><br>自动检测会检查页面是否有无障碍问题，信息对不对还得看原图。</p></aside>
     <div class="desk-main"><div class="desk-head"><strong>REVIEW DESK / 海报核对台</strong><span id="desk-status">等待提交材料</span></div>
   <p id="notice" role="status" aria-live="polite">正在读取本地配置…</p><p id="error" role="alert" hidden></p>
-  <aside id="runtime-warning" class="callout" hidden aria-labelledby="runtime-title"><h2 id="runtime-title">检查一下演示版本</h2><p id="runtime-message" role="status" aria-live="polite"></p><details><summary>如何更新本地演示</summary><p>先下载需要保留的结果，并另存还没提交的文字，重启会清空任务。回到启动演示的终端，按 Ctrl+C 停止旧服务，再运行 <code>npm.cmd run dev</code>。启动后打开终端显示的本地地址。</p></details><button id="check-runtime" type="button">重新核对版本</button></aside>
+  <aside id="runtime-warning" class="callout" hidden aria-labelledby="runtime-title"><h2 id="runtime-title">检查一下演示版本</h2><p id="runtime-message" role="status" aria-live="polite"></p><details><summary>如何更新本地演示</summary><p>先下载要留的结果，另存还没提交的文字——重启会清空任务。回到启动演示的终端，按 Ctrl+C 停掉旧服务，再运行 <code>npm.cmd run dev</code>。起来之后，打开终端显示的本地地址。</p></details><button id="check-runtime" type="button">重新核对版本</button></aside>
   <div class="layout">
     <section class="panel" aria-labelledby="input-title"><p class="panel-label">INPUT / 原始材料</p><div class="panel-heading"><h2 id="input-title" tabindex="-1">提交一张海报</h2></div>
       <form id="input-form">
@@ -89,33 +89,33 @@
           <div id="poster-viewport" tabindex="0" role="region" aria-label="原图局部滚动查看" aria-describedby="image-zoom-help"><div id="poster-canvas"><img id="poster-preview" src="./poster.svg" alt="合成海报：一起读书，社区公益阅读会。完整文字位于下方转录框。"></div></div>
           <p id="image-zoom-help" class="muted">放大后可以滚动查看，点选图片区域后也能用方向键移动。放大不会让模糊的字变清楚，看不清的就保留未知。</p><p id="image-review-error" class="muted" hidden>原图暂时无法显示。可以重新选图，或先保留转录中的待核实内容。</p>
         </div>
-        <label for="transcript">海报转录文字</label><textarea id="transcript" rows="8" readonly></textarea><p id="text-help" class="muted">按“活动名称：”“活动时间：”“活动地点：”“报名方式：”填写，系统会把对应文字放进四项信息。没有这些标签的项目会留空，等你核对。</p>
+        <label for="transcript">海报转录文字</label><textarea id="transcript" rows="8" readonly></textarea><p id="text-help" class="muted">按“活动名称：”“活动时间：”“活动地点：”“报名方式：”分行写，对得上号的会自动归进四项信息；对不上的先留空，等你核对。</p>
         <label for="source-note">材料从哪里来，为什么可以使用？</label><input id="source-note" maxlength="500" value="开发者原创合成演示海报；非真实活动" required>
-        <label class="check"><input id="permission" type="checkbox" required><span>我确认有权使用这份材料。选择真实识别时，图片会发给 StepFun；对方如何保留图片，目前还未核实。</span></label>
+        <label class="check"><input id="permission" type="checkbox" required><span>我确认有权使用这份材料。选择真实识别时，图片会发给 StepFun；对方会不会留存，还没核实过。</span></label>
         <button class="primary" id="create" type="submit">生成待核对草稿 <span aria-hidden="true">↗</span></button>
       </form>
-      <p class="privacy">这是本机演示。你提交的原图不写入磁盘，任务和文字最多在内存中保留 30 分钟，重启后会丢失。刷新页面后无法恢复当前任务，但未到期的资料仍在本机服务内存中。删除任务不能撤回已经发给第三方的请求。公开示例是演示附带的已有存档。</p>
+      <p class="privacy">这是本机演示。原图不写进磁盘，任务和文字只待在内存里，最多 30 分钟，一重启就没。刷新找不回当前任务，但没到期的资料还在本机服务里。删得了本机的任务，撤不回已经发给第三方的请求。公开示例是演示自带的存档。</p>
     </section>
     <section class="panel result-panel" aria-labelledby="result-title"><p class="panel-label">REVIEW / 对照、修订与确认</p><div class="panel-heading"><h2 id="result-title" tabindex="-1">核对海报内容</h2></div>
-      <div id="empty"><span class="empty-symbol" aria-hidden="true">Aa</span><h3>草稿会显示在这里</h3><p>提交材料后，就能对照草稿核对。<br>没写清楚的信息可以留空，不用猜。</p><p class="muted">检测通过，仍要核对信息是否准确。<br>完成核对，也不代表已通过用户测试或被机构采用。</p></div>
+      <div id="empty"><span class="empty-symbol" aria-hidden="true">Aa</span><h3>草稿会显示在这里</h3><p>提交材料后，就能对照草稿核对。<br>没写清楚的信息可以留空，不用猜。</p><p class="muted">检测过了，信息对不对还得人再核。<br>核对完成，也不等于有人试用过、有机构采用过。</p></div>
       <div id="task-controls" hidden><p id="task-meta" class="muted"></p><div class="actions"><button id="cancel" type="button" hidden>取消处理</button><button id="delete" type="button">删除当前任务</button></div></div>
       <div id="task-read-recovery" class="callout" hidden><p id="task-read-help">暂时没读到任务状态，处理可能还在继续。点击下方按钮只会查询进度，不会重新上传图片或调用模型，也不会延长资料的保留时间。</p><button id="retry-task" type="button" aria-describedby="task-read-help">重新读取任务状态</button></div>
       <div id="manual-fallback" class="callout" hidden><h3>识别没完成，也可以继续</h3><p id="manual-fallback-help">点击后会删除这次失败或已取消的任务，把本页图片和来源留下来，方便你对照着输入文字。不会再调用模型，也不会延长材料的保留时间；之前发出的请求可能仍会计费。</p><button id="use-manual" type="button" aria-describedby="manual-fallback-help">保留图片，改用人工转录</button></div>
       <div id="draft" hidden>
         <p id="provider-label" class="callout"></p>
-        <div id="unknown-facts-help" class="fact-guidance" hidden><strong>四项活动信息都还不清楚。</strong><p>先看看原图或转录文字，不清楚的就保留未知。如果选错了图片，或图片里没有活动信息，可以删除任务后重新提交。补充信息时，请写明核实过的来源。</p><button id="review-material" type="button">回到材料对照</button></div>
+        <div id="unknown-facts-help" class="fact-guidance" hidden><strong>四项信息现在都是空的。</strong><p>先看看原图或转录文字，拿不准就保留未知。选错了图、或者图里本来就没有活动信息，删掉任务重新提交就行。补充信息时，写明你核实过的来源。</p><button id="review-material" type="button">回到材料对照</button></div>
         <details><summary>展开原始转录和待核实内容</summary><h3>原始转录（可能有识别错误）</h3><pre id="original"></pre><h3>最初生成的概述和图像说明（供对照）</h3><p id="summary"></p><ul id="uncertainties"></ul><button id="review-image" type="button" aria-controls="poster-viewport" hidden>放大对照原图</button></details>
         <p id="summary-source" class="muted" hidden></p>
         <form id="edit-form"><div id="fact-fields"></div>
-          <aside id="body-review" class="callout" aria-labelledby="body-review-title" hidden><h3 id="body-review-title">字段修订与正文对照</h3><p id="body-review-help">这里会提示四项信息与已保存正文中可能不一致的文字，不能据此判断谁对谁错。请对照材料修改正文，或核实保留差异的理由。保存后提示才会更新；没有提示也不代表内容正确。</p><ul id="body-review-list"></ul><button id="review-body" type="button" aria-describedby="body-review-help">打开完整文字核对</button></aside>
-          <details id="content-editor" hidden><summary>修正完整文字、概述与图像说明</summary><p class="muted">导出结果会同时保留四项信息和下方正文，请核对两处是否一致。最初提取的原文和修改依据都会留下记录；保存后需要重新检测。</p><label for="content-original">核对后的完整文字</label><textarea id="content-original" rows="8" maxlength="12000" required></textarea>
-            <div id="summary-mode-controls" hidden><label for="summary-mode">概述怎么生成？</label><select id="summary-mode" aria-describedby="summary-mode-help"><option value="fields">根据四项信息生成</option><option value="custom">人工核对概述</option></select><p id="summary-mode-help" class="muted">根据四项信息生成概述，只是整理文字，不会核实事实。最初生成的概述仍在上方，切换选项也不会丢掉手写的概述草稿。保存后需要重新检测。</p><p id="field-summary-label">根据四项信息生成的概述（保存后才会用于导出）</p><pre id="field-summary-preview" aria-labelledby="field-summary-label"></pre></div>
+          <aside id="body-review" class="callout" aria-labelledby="body-review-title" hidden><h3 id="body-review-title">字段修订与正文对照</h3><p id="body-review-help">这里会提示四项信息和已保存正文里对不上的文字，但它判不了谁对谁错。请对照材料改正文，或者核实后保留差异。保存后提示才会更新；没有提示，也不代表内容就对。</p><ul id="body-review-list"></ul><button id="review-body" type="button" aria-describedby="body-review-help">打开完整文字核对</button></aside>
+          <details id="content-editor" hidden><summary>修正完整文字、概述与图像说明</summary><p class="muted">导出会同时带走四项信息和下方正文，两处请核对一致。最初提取的原文、每次修改依据都会留档；保存后要重新检测。</p><label for="content-original">核对后的完整文字</label><textarea id="content-original" rows="8" maxlength="12000" required></textarea>
+            <div id="summary-mode-controls" hidden><label for="summary-mode">概述怎么生成？</label><select id="summary-mode" aria-describedby="summary-mode-help"><option value="fields">根据四项信息生成</option><option value="custom">人工核对概述</option></select><p id="summary-mode-help" class="muted">按四项信息生成概述，只是整理文字，不核实事实。最初的概述还在上方；切换选项不会丢掉手写的草稿。保存后要重新检测。</p><p id="field-summary-label">根据四项信息生成的概述（保存后才会用于导出）</p><pre id="field-summary-preview" aria-labelledby="field-summary-label"></pre></div>
             <label id="custom-summary-label" for="content-summary">核对后的概述</label><textarea id="content-summary" rows="3" maxlength="1500"></textarea><label for="content-description">核对后的图像说明</label><textarea id="content-description" rows="3" maxlength="1500"></textarea></details>
           <label for="edit-reason">修改依据（有修改时必填）</label><input id="edit-reason" maxlength="700" placeholder="例如：对照原图更正；或补充已核实资料的来源"><button id="save" type="submit">保存修改（需重新检测）</button></form>
         <div class="audit-box"><h3>自动检测</h3><p>检查的是准备导出的大字 HTML 页面，不能判断海报信息是否属实。</p><button id="audit" type="button">检测当前草稿</button><pre id="audit-output">还没检测，请先检测再确认和导出。</pre></div>
         <form id="review-form"><fieldset><legend>请逐项确认（留空的项目也要确认保留未知）</legend><div id="confirm-fields"></div><label class="check"><input id="confirm-content" type="checkbox"><span>我已对照材料，核对四项信息是否与完整文字、概述和图像说明一致。我知道其中仍可能有错。</span></label></fieldset><button class="primary" id="confirm" type="submit">确认当前版本并生成回执</button></form>
       </div>
-      <div id="completed" hidden><p class="host-finish">“这次咱俩都站着。”</p><h3>核对完成，可以下载了</h3><p class="callout">这份记录说明你完成了本次核对，还不能证明接收者用起来是否方便，也没有机构采用的证据。</p><div class="actions"><button id="export-text" type="button">下载纯文本</button><button id="export-html" type="button">下载大字 HTML</button><button id="export-receipt" type="button">下载证据 JSON</button><button id="copy" type="button">复制文字</button><button id="narrate-poster" type="button" aria-haspopup="dialog">请虚拟人讲解</button></div><label for="feedback">这份结果对当前任务有帮助吗？</label><select id="feedback"><option value="">尚未反馈</option><option value="helped">有帮助（自报）</option><option value="partly">部分有帮助（自报）</option><option value="not_helped">没有帮助（自报）</option></select><button id="send-feedback" type="button">保存我的反馈</button><p id="feedback-status" class="muted"></p><pre id="final-text"></pre></div>
+      <div id="completed" hidden><p class="host-finish">“这次咱俩都站着。”</p><h3>核对完成，可以下载了</h3><p id="export-status" class="muted" role="status" aria-live="polite"></p><p class="callout">这份记录只说明这一张核对完了；读的人用起来方不方便、有没有机构采用，它证明不了。</p><div class="actions"><button id="export-text" type="button">下载纯文本</button><button id="export-html" type="button">下载大字 HTML</button><button id="export-receipt" type="button">下载证据 JSON</button><button id="copy" type="button">复制文字</button><button id="narrate-poster" type="button" aria-haspopup="dialog">请虚拟人讲解</button></div><label for="feedback">这份结果对当前任务有帮助吗？</label><select id="feedback"><option value="">尚未反馈</option><option value="helped">有帮助（自报）</option><option value="partly">部分有帮助（自报）</option><option value="not_helped">没有帮助（自报）</option></select><button id="send-feedback" type="button">保存我的反馈</button><p id="feedback-status" class="muted"></p><pre id="final-text"></pre></div>
     </section>
   </div>
     </div>
@@ -128,15 +128,15 @@
         <div id="audio-file-group" hidden><label for="audio-file">短音频（WAV / MP3 / M4A / OGG / WebM，原文件最多 10 MB）</label><input id="audio-file" type="file" accept="audio/wav,audio/mpeg,audio/mp4,audio/ogg,audio/webm,.wav,.mp3,.m4a,.ogg,.webm"><p class="muted">浏览器可解码的音频会在本机转换为 16 kHz WAV。最长 60 秒；不支持的编码请先用其他工具转换。</p><audio id="audio-preview" controls preload="metadata" hidden></audio></div>
         <div id="audio-manual-group" hidden><label for="audio-manual">人工转写文字</label><textarea id="audio-manual" rows="8" maxlength="12000"></textarea></div>
         <label for="audio-source">材料来源 / 使用依据</label><input id="audio-source" maxlength="500" required>
-        <label class="check"><input id="audio-permission" type="checkbox" required><span>我有权处理材料；真实模式会将转换后的音频和转写文字发送给 StepFun，不包含未经授权的个人敏感资料。</span></label>
+        <label class="check"><input id="audio-permission" type="checkbox" required><span>我有权处理这份材料；真实模式会把转换后的音频和转写文字发给 StepFun，其中不应有未经授权的个人敏感资料。</span></label>
         <button id="audio-create" type="submit" class="primary">生成待核对文字</button></form>
-      <p class="privacy">转写一次，摘要最多再请求一次，无自动重试。与海报和截图共用最多 10 次的进程请求额度；不是费用金额上限。供应商留存策略尚未核实。</p>
+      <p class="privacy">转写请求一次，摘要最多再来一次，不自动重试。和海报、截图共用本进程最多 10 次的请求额度；这是次数，不是钱。供应商会不会留存，还没核实。</p>
     </section><section class="panel result-panel" aria-labelledby="audio-result-title"><h2 id="audio-result-title">全文与重点，分开核对</h2><p id="audio-status" role="status" aria-live="polite">正在检查配置…</p><p id="audio-meta" class="muted"></p>
       <div class="actions"><button id="audio-cancel" type="button" hidden>取消处理</button><button id="audio-retry" type="button" hidden>重新读取任务状态</button><button id="audio-delete" type="button">删除任务与本页资料</button></div>
       <div id="audio-result" hidden><p id="audio-label" class="callout"></p><details><summary>查看初次转写与依据</summary><pre id="audio-original"></pre><pre id="audio-evidence"></pre></details>
-        <label for="audio-text">核对后的完整文字</label><textarea id="audio-text" rows="9" maxlength="12000"></textarea><label for="audio-summary">重点摘要（不替代全文）</label><textarea id="audio-summary" rows="5" maxlength="6000"></textarea>
+        <label for="audio-text">核对后的完整文字</label><textarea id="audio-text" rows="9" maxlength="12000"></textarea><label for="audio-summary">重点摘要（不替代全文）</label><textarea id="audio-summary" rows="5" maxlength="6000" aria-describedby="audio-consistency"></textarea><p id="audio-consistency" class="callout" role="status" hidden></p>
         <label for="audio-reason">修改依据（有修订时必填）</label><input id="audio-reason" maxlength="700" placeholder="例如：回听原音，更正时间"><button id="audio-save" type="button" disabled>保存修改，重新核对</button><p id="audio-warnings" class="callout"></p>
-        <label class="check"><input id="audio-confirmed" type="checkbox"><span>我已对照材料核对全文与摘要，保留无法确认的内容；这不代表独立事实核实。</span></label><button id="audio-review" type="button" disabled>确认当前文字</button>
+        <label class="check"><input id="audio-confirmed" type="checkbox"><span>我已对照材料核对全文和摘要，确认不了的保留原样；这不等于独立的事实核实。</span></label><button id="audio-review" type="button" disabled>确认当前文字</button>
         <div class="actions"><button id="audio-text-export" type="button" disabled>下载纯文本</button><button id="audio-receipt-export" type="button" disabled>下载核对记录 JSON</button></div>
       </div></section></div>
   </section>
@@ -148,23 +148,23 @@
       <div id="guide-file-group" hidden><label for="guide-file">当前界面截图（PNG / JPEG / WebP，最多 2 MB）</label><input id="guide-file" type="file" accept="image/png,image/jpeg,image/webp"><img id="guide-preview" alt="本次选择的界面截图，请与指导对照" hidden></div>
       <label for="guide-goal">你希望完成什么？</label><input id="guide-goal" maxlength="300" value="找到调整文字大小的入口" required><label for="guide-source">截图来源 / 使用依据</label><input id="guide-source" maxlength="500" required>
       <label class="check"><input id="guide-permission" type="checkbox" required><span>我有权处理截图；真实模式会把截图与目标发送给 StepFun，截图不含密码、验证码、支付凭证或未经授权的个人资料。</span></label><button id="guide-create" type="submit" class="primary">看看当前一步</button></form>
-      <p class="privacy">每轮一张图、一次请求。请按实际界面判断；看不清或涉及敏感操作时暂停。不会控制你的设备、打开截图内链接或代替你提交。</p>
+      <p class="privacy">一轮一张图、一次请求。眼前的实际界面为准；看不清、碰到敏感操作，先停一停。它不会控制你的设备，不会碰截图里的链接，也不会替你提交。</p>
     </section><section class="panel result-panel" aria-labelledby="guide-result-title"><h2 id="guide-result-title">先核对，再操作</h2><p id="guide-status" role="status" aria-live="polite">正在检查配置…</p><p id="guide-meta" class="muted"></p>
       <div class="actions"><button id="guide-cancel" type="button" hidden>取消处理</button><button id="guide-retry" type="button" hidden>重新读取任务状态</button><button id="guide-delete" type="button">删除任务与本页资料</button></div>
       <div id="guide-result" hidden><p id="guide-label" class="callout"></p><h3>当前页面</h3><p id="guide-screen"></p><h3>建议的下一步</h3><p id="guide-next"></p><p id="guide-position"></p><h3>如何确认</h3><p id="guide-check"></p><p id="guide-warnings" class="callout"></p>
-        <label class="check"><input id="guide-confirmed" type="checkbox"><span>我已阅读本轮说明。界面发生变化后会上传新截图，不依据旧图猜测后续步骤。</span></label><button id="guide-review" type="button" disabled>确认已阅读当前一步</button>
+        <label class="check"><input id="guide-confirmed" type="checkbox"><span>我已读完本轮说明。界面变了就传新截图，不拿旧图猜后面的步骤。</span></label><button id="guide-review" type="button" disabled>确认已阅读当前一步</button>
         <button id="guide-continue" type="button" disabled>已操作，上传新截图继续</button><p id="guide-continuing" class="callout" hidden>请上传操作后的新截图，目标保持不变，再提交当前一步。</p><div class="actions"><button id="guide-text-export" type="button" disabled>下载当前指导</button><button id="guide-receipt-export" type="button" disabled>下载核对记录 JSON</button></div>
       </div></section></div>
-    <p class="privacy">材料与任务只在本机内存暂留，最多 30 分钟；刷新不恢复。删除与取消不能撤回供应商已收到的资料或已发生的计费。截图里的按钮识别与指导安全仍需要真人核对。</p>
+    <p class="privacy">材料和任务只在本机内存里待最多 30 分钟，刷新找不回。删除、取消，都撤不回供应商已经收到的资料和已经发生的计费。按钮认得对不对、建议安不安全，最后还得人来看。</p>
   </section>
   <section id="my-page" class="my-page" data-page="me" aria-labelledby="my-title" hidden>
     <div class="section-heading"><div><p class="eyebrow">MY DESK / 从一件小事开始</p><h1 id="my-title" tabindex="-1">我的工作台</h1><p class="section-description">继续核对海报，也可以在这里调整阅读设置。</p></div><span class="local-badge">仅本机体验</span></div>
     <div class="personal-layout">
       <aside class="profile-card" aria-labelledby="profile-name"><span id="profile-avatar" class="profile-avatar" aria-hidden="true">↗</span><span class="profile-kicker">CYBERCARE / 体验身份</span><h2 id="profile-name">你好，来访的朋友。</h2><p id="profile-description">不用登录，也能核对和导出海报。</p><button id="profile-login" class="primary" type="button" aria-haspopup="dialog">选择演示身份</button><button id="profile-logout" type="button" hidden>退出演示身份</button><p class="profile-note">这些是演示用的称呼，没有真实账户，也不会验证你的身份。</p></aside>
       <div class="personal-content">
-        <section class="personal-card" aria-labelledby="session-title"><div class="card-heading"><h2 id="session-title">本页临时任务</h2><span id="session-state" class="state-badge">尚未开始</span></div><p id="session-description">选一张海报开始，也可以先用内置样例试试。</p><p id="session-expiry" class="muted" hidden></p><button id="session-continue" class="primary" type="button">开始核对海报 ↗</button><p class="card-footnote">切换页面时，进度会保留；刷新后无法恢复任务。资料最多保留 30 分钟，需要的结果请及时下载。</p></section>
+        <section class="personal-card" aria-labelledby="session-title"><div class="card-heading"><h2 id="session-title">本页临时任务</h2><span id="session-state" class="state-badge">尚未开始</span></div><p id="session-description">选一张海报开始，也可以先用内置样例试试。</p><p id="session-expiry" class="muted" hidden></p><button id="session-continue" class="primary" type="button">开始核对海报 ↗</button><p class="card-footnote">切换页面进度还在；刷新就找不回了。资料最多留 30 分钟，想留的结果记得及时下载。</p></section>
         <section class="personal-card" aria-labelledby="preferences-title"><div class="card-heading"><h2 id="preferences-title">按你的习惯阅读</h2><span class="quiet-label">本机偏好</span></div><label class="preference-row" for="preference-large"><span><strong>大字模式</strong><small>放大文字和表单，读起来更轻松。</small></span><input id="preference-large" type="checkbox"></label><label class="preference-row" for="preference-motion"><span><strong>关闭角色动作</strong><small id="preference-motion-help">角色不再动，文字互动照常使用。</small></span><input id="preference-motion" type="checkbox" aria-describedby="preference-motion-help"></label><p class="card-footnote">这些设置保存在本机浏览器，退出演示身份后也会保留。</p></section>
-        <section class="personal-card help-card" aria-labelledby="help-title"><h2 id="help-title">开始前，你可能想知道</h2><details><summary>需要登录才能使用吗？</summary><p>不用登录就能使用全部功能。演示身份只是换个称呼，不会建立账户或同步资料。称呼只在当前标签页记住，关闭后不再保留；换身份也不会改变本页任务。</p></details><details><summary>怎样得到一份可带走的结果？</summary><p>提交材料后，先对照原图核对四项信息和完整文字，再检测、逐项确认。完成后可以下载文字、大字 HTML 或核对记录。不清楚的信息可以保留未知；修改后要重新检测和确认。</p></details><details><summary>图片和文字会留在哪里？</summary><p>原图和任务只在本机服务内存中保留，最多 30 分钟，重启后会丢失。演示登录不会替你保存海报、任务历史或导出文件。如果选择真实识别，图片会发给 StepFun。想提前清除本机任务，可以到海报工作台删除。</p></details></section>
+        <section class="personal-card help-card" aria-labelledby="help-title"><h2 id="help-title">开始前，你可能想知道</h2><details><summary>需要登录才能使用吗？</summary><p>全部功能不登录也能用。演示身份只是换个称呼，不开账户、不同步资料。称呼只在当前标签页记得住，关掉就忘；换身份不影响本页任务。</p></details><details><summary>怎样得到一份可带走的结果？</summary><p>提交材料，先对照原图核对四项信息和完整文字，再检测、逐项确认，然后就能下载文字、大字 HTML 或核对记录。不清楚的保留未知；改过就要重新检测和确认。</p></details><details><summary>图片和文字会留在哪里？</summary><p>原图和任务只待在本机服务内存里，最多 30 分钟，重启就没。演示登录不会替你保存海报、任务历史或导出文件。选了真实识别，图片会发给 StepFun。想提前清掉本机任务，去海报工作台删就行。</p></details></section>
       </div>
     </div>
   </section>
@@ -176,7 +176,7 @@
   <p id="avatar-description">这里使用星云虚拟人，样子可能和首页角色不同。可以先听固定介绍；核对并确认海报后，也可以听四项信息和概述。</p>
   <p id="avatar-status" role="status" aria-live="polite">正在读取播报配置…</p>
   <div id="avatar-viewport" class="avatar-viewport" hidden></div>
-  <label class="check"><input id="avatar-consent" type="checkbox"><span>我同意把本次讲解文字发给星云并播放声音，不发送海报原图。星云如何保留文字还未核实，请勿播报个人敏感信息。</span></label>
+  <label class="check"><input id="avatar-consent" type="checkbox"><span>我同意把这段讲解文字发给星云并播放声音；海报原图不会发送。星云会不会留存文字还没核实，请勿播报个人敏感信息。</span></label>
   <div class="actions"><button id="avatar-demo" class="primary" type="button" disabled>播放介绍示例</button><button id="avatar-read" type="button" disabled>讲解已核对海报</button><button id="avatar-stop" type="button" disabled>停止播放</button><button id="avatar-refresh" type="button">重新检查配置</button></div>
   <p class="muted">点击播放后才会连接并发声，每次最多两分钟。关闭弹窗或把页面切到后台，会停止连接。已发出的文字无法撤回。目前只能播报指定内容，不能自由聊天。</p>
   <details open><summary>讲解文字</summary><pre id="avatar-transcript" class="avatar-transcript"></pre></details>

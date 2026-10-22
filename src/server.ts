@@ -49,6 +49,7 @@ const staticPaths: Record<string, [string, string]> = {
   '/host.js': ['web/host.js', 'text/javascript; charset=utf-8'],
   '/workspace.js': ['web/workspace.js', 'text/javascript; charset=utf-8'],
   '/assistance.js': ['web/assistance.js', 'text/javascript; charset=utf-8'],
+  '/audio-review.js': ['audio-review.js', 'text/javascript; charset=utf-8'],
   '/narrator.js': ['web/narrator.js', 'text/javascript; charset=utf-8'],
   '/avatar-stage.html': ['web/avatar-stage.html', 'text/html; charset=utf-8'],
   '/avatar-stage.js': ['web/avatar-stage.js', 'text/javascript; charset=utf-8'],

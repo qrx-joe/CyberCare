@@ -4,6 +4,7 @@ import { validateAudio, createAssistanceService } from '../dist/assistance.js';
 import { createAssistanceProvider, parseTranscription, validateSummary, validateGuidance, parseAssistanceJson } from '../dist/assistance-provider.js';
 import { createProvider } from '../dist/provider.js';
 import { fromTranscript, SAMPLE_TEXT } from '../dist/domain.js';
+import { audioReviewHints } from '../dist/audio-review.js';
 
 const signal = () => new AbortController().signal;
 const env = { STEPFUN_API_KEY: 'synthetic-test-key', STEPFUN_BASE_URL: 'https://api.stepfun.com/v1', STEPFUN_MODEL: 'synthetic-model', MODEL_REQUEST_LIMIT: '3' };
@@ -132,4 +133,28 @@ test('截图继续必须确认前一步、同目标、同会话和新截图', as
     task.guidance.risk = 'sensitive';
     assert.throws(() => service.create({ ...guide, previousId: task.id }, 'owner', 'sensitive-next'), e => e.code === 'SENSITIVE_STEP');
   } finally { service.close(); }
+});
+
+test('更正误识别地点后，API 和导出指出摘要仍引用旧地点；同步修正后提示消失', async () => {
+  const original = '地点是市立活动室。', summary = '活动地点是市立活动室。';
+  const service = createAssistanceService({ run: async () => ({ audio: { original, summary: [{ text: summary, evidence: original }], facts: [{ kind: 'location', text: '市立活动室', evidence: original }], uncertainties: [] }, providers: [] }) });
+  try {
+    const task = service.create(manual, 'owner', 'correction'); await tick();
+    service.edit(task.id, 'owner', { revision: 1, text: '地点是示例活动室。', summary, reason: '合成回听答案：原音是示例活动室' });
+    assert.deepEqual(service.public(task).audioReviewHints?.map(hint => hint.text), ['市立活动室']);
+    service.review(task.id, 'owner', 2);
+    assert.match(service.exportText(task.id, 'owner'), /摘要.*市立活动室.*全文/);
+    service.edit(task.id, 'owner', { revision: 2, text: '地点是示例活动室。', summary: '活动地点是示例活动室。', reason: '同步更正摘要' });
+    assert.equal(service.public(task).audioReviewHints?.length ?? 0, 0);
+    assert.equal(task.audio.original, original);
+  } finally { service.close(); }
+});
+
+test('语音文字对照只处理已有原文事项，兼容布局空白与 NFC，不把字符串当正则或自动判真', () => {
+  const audio = { original: '地点：Café A+B[2] 活动室', summary: [], facts: [{ kind: 'location', text: 'Café A+B[2] 活动室', evidence: '地点：Café A+B[2] 活动室' }], uncertainties: [] };
+  assert.deepEqual(audioReviewHints(audio, '地点：Cafe\u0301 A+B[2]\n活动室', 'Café A+B[2] 活动室'), []);
+  assert.deepEqual(audioReviewHints(audio, '地点待核实', '地点待核实'), []);
+  assert.equal(audioReviewHints(audio, '地点：Cafe AAB2 活动室', '地点：Café A+B[2] 活动室').length, 1);
+  assert.deepEqual(audioReviewHints({ ...audio, facts: [{ kind: 'location', text: '不在原文的场地', evidence: audio.original }] }, '', '不在原文的场地'), []);
+  assert.equal(audioReviewHints({ ...audio, facts: [...audio.facts, ...audio.facts] }, '已修订', audio.original).length, 1);
 });

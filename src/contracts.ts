@@ -111,4 +111,5 @@ export interface AssistanceTask {
   reviewed?: { text: string; summary: string; reason: string; at: string };
   confirmedAt?: string; controller: AbortController;
 }
-export type PublicAssistanceTask = Omit<AssistanceTask, 'session' | 'controller'>;
+export interface AudioReviewHint { kind: 'time' | 'location' | 'todo'; text: string; message: string; }
+export type PublicAssistanceTask = Omit<AssistanceTask, 'session' | 'controller'> & { audioReviewHints?: AudioReviewHint[] };

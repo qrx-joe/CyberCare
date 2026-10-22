@@ -4,6 +4,7 @@ import { hash } from './domain.js';
 import { validateImage } from './service.js';
 import { createAssistanceProvider } from './assistance-provider.js';
 import { AssistanceFailure } from './provider.js';
+import { audioReviewHints } from './audio-review.js';
 
 export function validateAudio(data: string) {
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(data)) throw new AppError(415, 'AUDIO_INVALID', '音频编码无效。');
@@ -44,7 +45,11 @@ export function createAssistanceService(adapter: ReturnType<typeof createAssista
   }
   return {
     get, prune,
-    public(task: AssistanceTask): PublicAssistanceTask { const { session: _session, controller: _controller, ...rest } = task; return rest; },
+    public(task: AssistanceTask): PublicAssistanceTask {
+      const { session: _session, controller: _controller, ...rest } = task;
+      const hints = audioReviewHints(task.audio, task.reviewed?.text ?? task.audio?.original ?? '', task.reviewed?.summary ?? task.audio?.summary.map(item => item.text).join('\n') ?? '');
+      return { ...rest, ...(hints.length ? { audioReviewHints: hints } : {}) };
+    },
     create(input: AssistanceInput, session: string, key: string) {
       prune(); const fingerprint = hash(JSON.stringify(input)), requestKey = `${session}:${key}`, prior = keys.get(requestKey);
       if (prior) { if (prior.fingerprint !== fingerprint) throw new AppError(409, 'IDEMPOTENCY_CONFLICT', '相同请求编号的材料不能更换。'); return get(prior.id, session); }
@@ -98,7 +103,11 @@ export function createAssistanceService(adapter: ReturnType<typeof createAssista
       const task = get(id, session);
       if (task.status !== 'completed') throw new AppError(409, 'REVIEW_REQUIRED', '请先确认当前版本。');
       const prefix = `CyberCare ${task.kind === 'audio' ? '语音转写' : '截图操作指导'}\n模式：${task.mode === 'sample' ? '合成文字/界面示例，非 AI 识别' : task.mode === 'manual' ? '人工输入，非语音识别' : 'AI 结果，经当前操作者核对，仍可能有错'}\n来源：${task.sourceNote}\n版本：${task.revision}\n非 WCAG 检测回执；未经独立用户验证。\n`;
-      if (task.audio) return `${prefix}\n完整文字\n${task.reviewed?.text ?? task.audio.original}\n\n重点摘要（不替代全文）\n${(task.reviewed?.summary ?? task.audio.summary.map(s => s.text).join('\n')) || '未生成'}\n\n初次转写的原文依据与关键事项（人工修订后请重新核实）\n${task.audio.facts.map(f => `${f.kind}: ${f.text} [依据：${f.evidence}]`).join('\n')}\n${[...task.audio.uncertainties, task.audio.summaryError ?? ''].join('\n')}`;
+      if (task.audio) {
+        const text = task.reviewed?.text ?? task.audio.original, summary = task.reviewed?.summary ?? task.audio.summary.map(s => s.text).join('\n');
+        const hints = audioReviewHints(task.audio, text, summary);
+        return `${prefix}\n完整文字\n${text}\n\n重点摘要（不替代全文）\n${summary || '未生成'}${hints.length ? `\n\n全文与摘要待核对\n${hints.map(hint => hint.message).join('\n')}` : ''}\n\n初次转写的原文依据与关键事项（人工修订后请重新核实）\n${task.audio.facts.map(f => `${f.kind}: ${f.text} [依据：${f.evidence}]`).join('\n')}\n${[...task.audio.uncertainties, task.audio.summaryError ?? ''].join('\n')}`;
+      }
       const g = task.guidance!;
       return `${prefix}\n目标：${task.goal}\n当前页面：${g.screen}\n当前一步：${g.next ? `${g.next.action}\n位置：${g.next.position}\n控件：${g.next.target}` : '暂停操作，无法可靠提供当前一步'}\n确认方式：${g.check}\n${g.warnings.join('\n')}\n本次仅为当前截图的指导记录，不证明实际操作完成。`;
     },

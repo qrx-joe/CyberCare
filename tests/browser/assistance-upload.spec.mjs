@@ -36,5 +36,27 @@ test('真实上传链路的替代 Provider 回归：浏览器转换音频、服�
     await page.locator('#guide-delete').click(); await expect(page.locator('#guide-result')).toBeHidden();
     await expect.poll(async () => (await context.request.get(`/api/assistance/${id}`)).status()).toBe(404);
     const config = await (await context.request.get('/api/assistance/config')).json(); expect(config.requests).toBe(4);
+    for (const scenario of ['敏感页面', '看不清']) {
+      const goal = `合成测试：${scenario}`;
+      await page.locator('#guide-mode').selectOption('live'); await page.locator('#guide-goal').fill(goal);
+      await page.locator('#guide-file').setInputFiles({ name: 'safety-scenario.png', mimeType: 'image/png', buffer: second });
+      await page.locator('#guide-source').fill('开发者原创合成界面；替代模型边界验证'); await page.locator('#guide-permission').check(); await page.locator('#guide-create').click();
+      await expect(page.locator('#guide-next')).toContainText('暂停操作');
+      const id = (await page.locator('#guide-meta').textContent()).match(/[a-f0-9-]{36}/)[0];
+      const result = await (await context.request.get(`/api/assistance/${id}`)).json();
+      expect(result.guidance.next).toBeNull(); expect(result.guidance.risk).toBe(scenario === '敏感页面' ? 'sensitive' : 'uncertain');
+      await page.locator('#guide-confirmed').check(); await page.locator('#guide-review').click();
+      if (scenario === '敏感页面') {
+        await expect(page.locator('#guide-continue')).toBeDisabled();
+        const forbidden = await context.request.post('/api/assistance', { headers: { 'X-CyberCare': '1', 'Idempotency-Key': crypto.randomUUID() }, data: { kind: 'guide', mode: 'live', goal, permission: true, sourceNote: '合成敏感边界', previousId: id, image: { name: 'safety-scenario.png', mime: 'image/png', data: second.toString('base64') } } });
+        expect(forbidden.status()).toBe(409); expect((await forbidden.json()).code).toBe('SENSITIVE_STEP');
+      } else {
+        await expect(page.locator('#guide-continue')).toBeEnabled(); await page.locator('#guide-continue').click();
+        await page.locator('#guide-file').setInputFiles({ name: 'clarified-screen.png', mimeType: 'image/png', buffer: first }); await page.locator('#guide-create').click();
+        await expect(page.locator('#guide-meta')).not.toContainText(id); await expect(page.locator('#guide-next')).toContainText('暂停操作');
+      }
+      await page.locator('#guide-delete').click(); await expect(page.locator('#guide-result')).toBeHidden();
+    }
+    expect((await (await context.request.get('/api/assistance/config')).json()).requests).toBe(7);
   } finally { await context.close(); if (server.exitCode === null && server.signalCode === null) { server.kill(); await once(server, 'exit'); } }
 });
