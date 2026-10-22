@@ -69,3 +69,10 @@
 - 部署仓库 `9eadb31`：两张帧图与哈希固定的星云 SDK 以精确 gitignore 例外进入 Codeup 私有仓库（不进公开 GitHub）；外层 stamp 守卫改为校验应用指纹并禁止参考图进产物（原 `localMediaIncluded===false` 断言随公网帧图过时）。本地预检：构建后 host.js 5,168,198 字节、SDK 通过哈希校验、业务测试通过。
 - 公网验证（真实 Chrome）：`/api/avatar/config` 200（`limit:100`；密钥未配前如实显示"星云应用尚未配置"）；`avatar-stage.html`、`xmov-avatar.js` 200；host.js 5.17MB 含帧图；角色 canvas 实测 58,416 个不透明采样像素（文字退路为 0）、磕头入口存在、工作台回归正常、页面错误 0。health：commit `9eadb31`、`localMediaIncluded=true`、新指纹 `049f95ae…`。证据在 `.local/validation/deployment-20261022-3rd/`。
 - 待办（用户操作）：在云效流水线 / K8s 部署环境变量中添加 `XINGYUN_APP_ID`、`XINGYUN_APP_SECRET`（值在本机主项目 `.env`），重新运行流水线后虚拟人播报即启用；Agent 不代填密钥，也不主动创建真实星云会话验证。
+
+## 第四次发布：虚拟人密钥进镜像（10/22 用户授权，bdd5148）
+
+- 用户要求 Agent 代为配置云效侧星云密钥。经浏览器登录云效核实：k8s 部署任务为"Kubectl镜像升级"步骤，仅替换镜像、不支持注入容器环境变量；发布类步骤亦无命令执行能力；本机无该集群 kubeconfig。生产容器现有环境（HOST/PORT/公网域名）实际来自 `server/entry.mjs` 默认值。
+- 采用镜像内 env 方案：`.env`（仅 `XINGYUN_APP_ID`/`XINGYUN_APP_SECRET` 两项）随 Codeup 私有仓库提交（`.gitignore`/`.dockerignore` 精确例外），Dockerfile 启动命令改为 `node --env-file-if-exists=/root/inner/.env server/entry.mjs`（Node 22.22.2 支持）。密钥只存在于私有 Codeup 仓库与私有镜像，不进公开 GitHub、不进 K8s 明文环境、不出现在任何日志输出；MySQL 调试凭据未纳入。
+- 流水线 #16 由推送 bdd5148 自动触发。公网验证：`/api/avatar/config` 返回 `configured:true`（见下方验证记录），虚拟人弹窗可用；Agent 未创建真实星云会话，声音与口型的真实验收由用户自行点击完成。
+- 取舍说明：K8s Secret + 集群侧注入是更标准的做法，但当前无集群权限与流水线字段支持；本方案为比赛演示的最短可靠路径，赛后可迁移。
