@@ -11,14 +11,16 @@ test('源码包在其他 Git 仓库内构建时，不借用外层提交作为自
   try {
     await mkdir(resolve(directory, 'src/web'), { recursive:true });
     await mkdir(resolve(directory, 'dist/web'), { recursive:true });
-    for (const [name, content] of Object.entries({ 'index.html':'<!doctype html><title>合成构建测试</title>', 'style.css':'', 'poster.svg':'<svg xmlns="http://www.w3.org/2000/svg"/>', 'human-patch-primary.svg':'<svg xmlns="http://www.w3.org/2000/svg"><title>合成标识</title></svg>' })) {
+    for (const [name, content] of Object.entries({ 'index.html':'<!doctype html><title>合成构建测试</title>', 'style.css':'', 'poster.svg':'<svg xmlns="http://www.w3.org/2000/svg"/>', 'human-patch-primary.svg':'<svg xmlns="http://www.w3.org/2000/svg"><title>合成标识</title></svg>', 'avatar-stage.html':'<!doctype html><title>合成讲解测试</title>' })) {
       await writeFile(resolve(directory, 'src/web', name), content);
     }
-    await writeFile(resolve(directory, 'dist/web/host.js'), 'const atlas = "__CYBERCARE_AVATAR_ATLAS__";');
+    await writeFile(resolve(directory, 'dist/web/host.js'), 'const atlas = "__CYBERCARE_AVATAR_ATLAS__"; const kowtow = "__CYBERCARE_KOWTOW_ATLAS__";');
     await writeFile(resolve(directory, 'dist/web/app.js'), 'const example = "__CYBERCARE_READONLY_EXAMPLE__";');
     await writeFile(resolve(directory, 'package.json'), '{"name":"synthetic-build"}');
     await writeFile(resolve(directory, 'package-lock.json'), '{"lockfileVersion":3}');
     await mkdir(resolve(directory, '.local/examples'), { recursive:true });
+    await mkdir(resolve(directory, '.local/avatar'), { recursive:true });
+    await writeFile(resolve(directory, '.local/avatar/character-kowtow-v1.png'), 'synthetic local-only kowtow bytes');
     await writeFile(resolve(directory, '.local/examples/poster-comparison.json'), 'invalid disabled local data');
     const child = spawnSync(process.execPath, [resolve('scripts/build.mjs')], { cwd:directory, env:{ ...process.env, CYBERCARE_INCLUDE_LOCAL_MEDIA:'0' }, encoding:'utf8', windowsHide:true });
     assert.equal(child.status, 0, child.stderr);
@@ -26,6 +28,7 @@ test('源码包在其他 Git 仓库内构建时，不借用外层提交作为自
     assert.equal(build.sourceCommit, null);
     assert.equal(build.sourceDirty, null);
     assert.equal(build.localMediaIncluded, false);
+    assert.equal(await readFile(resolve(directory, 'dist/web/host.js'), 'utf8'), 'const atlas = ""; const kowtow = "";');
     assert.equal(await readFile(resolve(directory, 'dist/web/app.js'), 'utf8'), 'const example = null;');
   } finally {
     assert.ok(directory.startsWith(validation + sep));
@@ -40,14 +43,15 @@ test('同内容重复构建保持应用指纹，后端、样式、本地素材�
     await mkdir(resolve(directory, 'src/web'), { recursive:true });
     await mkdir(resolve(directory, 'dist/web'), { recursive:true });
     await mkdir(resolve(directory, '.local/reference'), { recursive:true });
-    for (const name of ['index.html','style.css','poster.svg','human-patch-primary.svg']) await writeFile(resolve(directory, 'src/web', name), `synthetic ${name}`);
+    await mkdir(resolve(directory, '.local/avatar'), { recursive:true });
+    for (const name of ['index.html','style.css','poster.svg','human-patch-primary.svg','avatar-stage.html']) await writeFile(resolve(directory, 'src/web', name), `synthetic ${name}`);
     await writeFile(resolve(directory, 'package.json'), '{"name":"synthetic-build"}');
     await writeFile(resolve(directory, 'package-lock.json'), '{"lockfileVersion":3}');
     await writeFile(resolve(directory, 'dist/server.js'), 'export const synthetic = 1;');
     await writeFile(resolve(directory, '.local/reference/attention-poster.jpg'), 'synthetic media bytes; no image decoding asserted');
     const build = async () => {
       // tsc emits fresh markers before each real build; these stand in for its unchanged output.
-      await writeFile(resolve(directory, 'dist/web/host.js'), 'const atlas = "__CYBERCARE_AVATAR_ATLAS__";');
+      await writeFile(resolve(directory, 'dist/web/host.js'), 'const atlas = "__CYBERCARE_AVATAR_ATLAS__"; const kowtow = "__CYBERCARE_KOWTOW_ATLAS__";');
       await writeFile(resolve(directory, 'dist/web/app.js'), 'const example = "__CYBERCARE_READONLY_EXAMPLE__";');
       const child = spawnSync(process.execPath, [resolve('scripts/build.mjs')], { cwd:directory, env:{...process.env,CYBERCARE_INCLUDE_LOCAL_MEDIA:'1'}, encoding:'utf8', windowsHide:true });
       assert.equal(child.status, 0, child.stderr);
@@ -63,6 +67,7 @@ test('同内容重复构建保持应用指纹，后端、样式、本地素材�
     for (const [file, content] of [
       ['dist/server.js','export const synthetic = 2;'], ['src/web/style.css','body { color: #17221c; }'],
       ['.local/reference/attention-poster.jpg','different synthetic media bytes'], ['package-lock.json','{"lockfileVersion":3,"synthetic":true}'],
+      ['.local/avatar/character-kowtow-v1.png','synthetic kowtow bytes; no image decoding asserted'],
     ]) {
       await writeFile(resolve(directory, file), content);
       const next = await build(); assert.notEqual(next.applicationHash, previous, file); previous = next.applicationHash;

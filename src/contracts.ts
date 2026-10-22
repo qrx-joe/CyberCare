@@ -46,6 +46,8 @@ export const reviewSchema = z.object({
   contentConfirmed: z.literal(true),
 });
 export const feedbackSchema = z.object({ outcome: z.enum(['helped', 'partly', 'not_helped']) });
+export const avatarAttemptSchema = z.object({ attemptId: z.string().uuid() });
+export const narrationSchema = z.object({ revision: z.number().int(), permission: z.literal(true) });
 
 export class AppError extends Error {
   constructor(public status: number, public code: string, message: string) { super(message); }

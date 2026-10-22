@@ -1,0 +1,6 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>星云虚拟人播报画面</title><style>
+html,body,#xingyun-stage{width:100%;height:100%;margin:0;overflow:hidden;background:transparent}
+#xingyun-stage{position:relative}
+/* Provider anchor events can move its portrait outside a short landscape container. */
+#xingyun-stage canvas{position:absolute!important;left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;margin:0!important;width:auto!important;height:100%!important;max-width:100%!important;max-height:100%!important;object-fit:contain;transform:translate(-50%,-50%)!important}
+</style><script src="./xmov-avatar.js" defer></script><script src="./avatar-stage.js" type="module"></script></head><body><div id="xingyun-stage" aria-label="星云虚拟人画面"></div></body></html>
