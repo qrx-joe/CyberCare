@@ -27,8 +27,10 @@ test('源码包在其他 Git 仓库内构建时，不借用外层提交作为自
     const build = JSON.parse(await readFile(resolve(directory, 'dist/build-info.json'), 'utf8'));
     assert.equal(build.sourceCommit, null);
     assert.equal(build.sourceDirty, null);
-    assert.equal(build.localMediaIncluded, false);
-    assert.equal(await readFile(resolve(directory, 'dist/web/host.js'), 'utf8'), 'const atlas = ""; const kowtow = "";');
+    // Character frames are public demo assets since 10/22: present files are embedded
+    // even with local media disabled, while the personal example stays excluded.
+    assert.equal(build.localMediaIncluded, true);
+    assert.equal(await readFile(resolve(directory, 'dist/web/host.js'), 'utf8'), `const atlas = ""; const kowtow = "data:image/png;base64,${Buffer.from('synthetic local-only kowtow bytes').toString('base64')}";`);
     assert.equal(await readFile(resolve(directory, 'dist/web/app.js'), 'utf8'), 'const example = null;');
   } finally {
     assert.ok(directory.startsWith(validation + sep));

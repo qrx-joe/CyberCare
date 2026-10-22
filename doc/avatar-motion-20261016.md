@@ -52,3 +52,5 @@
 ## 结构影响
 
 修改 `src/web/host.ts` 管理帧播放及暂停生命周期，`index.html` 增加独立 Canvas 与说明，`style.css` 只移动角色层；`scripts/build.mjs` 读取可选本地素材。新增 `tests/browser/avatar.spec.mjs`，调整缺素材回退测试。没有改动 HTTP 业务接口、Provider、任务状态机、检测版本、确认或导出规则；现有海报闭环仍是主任务。
+
+10/22 午后补充：用户在部署核验时要求角色上线。经授权，两张帧图按"存在即嵌入"随公开演示构建（不再受 `CYBERCARE_INCLUDE_LOCAL_MEDIA=0` 排除），仅提交到 Codeup 私有部署仓库，不进公开 GitHub 仓库；含个人信息的参考图与只读示例仍受原开关排除。"对外分发前须另行解决素材授权"的遗留项由用户本次决定覆盖；体积取舍（host.js 约 5.2 MB、禁缓存）如实保留。

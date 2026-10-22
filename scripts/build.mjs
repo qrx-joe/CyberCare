@@ -20,12 +20,14 @@ if (existsSync(sdkPath)) {
 const reference = '.local/reference/attention-poster.jpg';
 if (includeLocalMedia && existsSync(reference)) await cp(reference, 'dist/web/reference-poster.jpg');
 else await rm('dist/web/reference-poster.jpg', { force: true });
-// The local-only atlas is embedded in the host module, with no extra route or credentials.
+// The character frames are project-owned and ship with the public demo (10/22 user
+// decision); they are embedded whenever present, independent of the local-media
+// switch that still governs the personal reference image and readonly example.
 const atlasPath = '.local/avatar/character-atlas-v1.png';
-const atlas = includeLocalMedia && existsSync(atlasPath) ? await readFile(atlasPath) : undefined;
+const atlas = existsSync(atlasPath) ? await readFile(atlasPath) : undefined;
 if (atlas && atlas.length > 6 * 1024 * 1024) throw new Error('Avatar atlas exceeds the local demo 6 MB asset limit.');
 const kowtowPath = '.local/avatar/character-kowtow-v1.png';
-const kowtow = includeLocalMedia && existsSync(kowtowPath) ? await readFile(kowtowPath) : undefined;
+const kowtow = existsSync(kowtowPath) ? await readFile(kowtowPath) : undefined;
 if (kowtow && kowtow.length > 6 * 1024 * 1024) throw new Error('Kowtow atlas exceeds the local demo 6 MB asset limit.');
 const hostCode = await readFile('dist/web/host.js', 'utf8');
 await writeFile('dist/web/host.js', hostCode
@@ -63,5 +65,5 @@ async function includeDirectory(path, prefix = '') {
 for (const name of ['package.json', 'package-lock.json']) await includeFile(name, name);
 await includeDirectory('dist');
 const applicationHash = application.digest('hex');
-await writeFile('dist/build-info.json', JSON.stringify({ sourceCommit, sourceDirty, builtAt: new Date().toISOString(), localMediaIncluded: includeLocalMedia && !!(atlas || kowtow || existsSync(reference) || example), applicationHash }));
+await writeFile('dist/build-info.json', JSON.stringify({ sourceCommit, sourceDirty, builtAt: new Date().toISOString(), localMediaIncluded: !!(atlas || kowtow || (includeLocalMedia && (existsSync(reference) || example))), applicationHash }));
 console.log('Built local demo in dist/ (no deployment).');

@@ -102,7 +102,8 @@ export const server = createServer(async (req, res) => {
       sessions.set(token, Date.now() + 30 * 60 * 1000);
       res.setHeader('Set-Cookie', `cybercare=${token}; HttpOnly; SameSite=Strict; Path=${cookiePath}; Max-Age=1800${publicOrigin && req.headers.host === publicOrigin.host ? '; Secure' : ''}`);
       if (url.pathname.startsWith('/api/avatar/')) {
-        if (![allowedHosts[0], allowedHosts[1]].includes(req.headers.host || '')) throw new AppError(403, 'AVATAR_LOCAL_ONLY', '虚拟人接入仅限本机验证。');
+        // Opened to the public origin on 10/22 with user approval; narration stays fixed-script only.
+        if (!allowedHosts.includes(req.headers.host || '')) throw new AppError(403, 'AVATAR_LOCAL_ONLY', '虚拟人接入仅限本站使用。');
         if (method === 'GET' && url.pathname === '/api/avatar/config') return json(res, 200, avatarGateway.info());
         if (method === 'POST' && url.pathname === '/api/avatar/stop') {
           const input = avatarAttemptSchema.parse(await body(req)); return json(res, 200, await avatarGateway.stop(token, input.attemptId));
@@ -182,7 +183,7 @@ export const server = createServer(async (req, res) => {
     }
     const file = staticPaths[url.pathname];
     if (method !== 'GET' || !file) throw new AppError(404, 'NOT_FOUND', '页面不存在。');
-    if (['/avatar-stage.html', '/xmov-avatar.js'].includes(url.pathname) && ![allowedHosts[0], allowedHosts[1]].includes(req.headers.host || '')) throw new AppError(403, 'AVATAR_LOCAL_ONLY', '虚拟人接入仅限本机验证。');
+    if (['/avatar-stage.html', '/xmov-avatar.js'].includes(url.pathname) && !allowedHosts.includes(req.headers.host || '')) throw new AppError(403, 'AVATAR_LOCAL_ONLY', '虚拟人接入仅限本站使用。');
     if (url.pathname === '/avatar-stage.html') {
       // Vendor network access stays in this opt-in frame; the application CSP stays unchanged.
       res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src blob: data: https://*.xingyun3d.com https://*.youyan.xyz https://public-xmov.oss-cn-hangzhou.aliyuncs.com; media-src blob: data: https://*.xingyun3d.com https://*.youyan.xyz https://public-xmov.oss-cn-hangzhou.aliyuncs.com; connect-src 'self' https://*.xingyun3d.com wss://*.xingyun3d.com https://*.youyan.xyz https://public-xmov.oss-cn-hangzhou.aliyuncs.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'none'");

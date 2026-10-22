@@ -36,8 +36,11 @@ export function createXingyunGateway(options: Options = {}) {
   const env = options.env ?? process.env, fetcher = options.fetcher ?? fetch;
   const appId = env.XINGYUN_APP_ID?.trim(), secret = env.XINGYUN_APP_SECRET?.trim();
   const sdkAvailable = options.sdkAvailable ?? (() => existsSync(new URL('web/xmov-avatar.js', import.meta.url)));
-  const configuredLimit = Number(env.XINGYUN_SESSION_LIMIT ?? 3);
-  const limit = Number.isInteger(configuredLimit) && configuredLimit >= 0 && configuredLimit <= 3 ? configuredLimit : 0;
+  // Since the 10/22 public opening: local runs keep the 3-session default, the public
+  // origin defaults to 100; 300 is the hard ceiling and invalid values close the gateway.
+  const defaultLimit = env.CYBERCARE_PUBLIC_ORIGIN ? 100 : 3;
+  const configuredLimit = Number(env.XINGYUN_SESSION_LIMIT ?? defaultLimit);
+  const limit = Number.isInteger(configuredLimit) && configuredLimit >= 0 && configuredLimit <= 300 ? configuredLimit : 0;
   const attempts = new Map<string, Attempt>();
   let requests = 0, stopped = false;
   let lastFailure: { method: string; stage: string; httpStatus?: number; providerCode?: number } | undefined;
