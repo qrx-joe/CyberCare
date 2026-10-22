@@ -78,7 +78,7 @@ function clearWorkspace(keepMaterial = false) {
 }
 function checkExpiry() {
   if (!expiresAt || Date.now() < expiresAt) return;
-  clearWorkspace(); error(); notice('资料已到期，本页文字、图片预览和任务已清空。需要的话，可以重新开始。');
+  clearWorkspace(); error(); notice('资料已到期，本页文字、图片预览和任务都清空了。需要的话，重新开始就好。');
 }
 
 function initImageReview() {
@@ -179,7 +179,7 @@ function createTimePicker(input: HTMLTextAreaElement, sourceText: string, refere
   const element = document.createElement('details'); element.id = 'time-picker'; element.className = 'time-picker';
   const toggle = document.createElement('summary'); toggle.textContent = '核对不同用途的时间';
   const help = document.createElement('p'); help.id = 'time-picker-help';
-  help.textContent = '这些时间的分类不一定对，请对照原图核对；拿不准就保留“用途待核实”。勾选条目后，点击写入才会填进空白的时间草稿。接着还要填写依据、保存、检测和确认。';
+  help.textContent = '时间的分类不一定对，请对照原图核对；拿不准就保留“用途待核实”。勾选后点写入，才会填进空白的时间草稿；之后还要填依据、保存、检测、确认。';
   const list = document.createElement('ul');
   const rows = references.map((reference, index) => {
     const item = document.createElement('li'), include = document.createElement('input'), selectLabel = document.createElement('label');
@@ -332,6 +332,11 @@ function updateGates() {
   el<HTMLButtonElement>('save').disabled = busy || !dirty || timeSelectionPending;
   el<HTMLButtonElement>('create').disabled = busy || !!task;
   el<HTMLButtonElement>('use-manual').disabled = busy;
+  const completed = task?.status === 'completed';
+  for (const id of ['export-text', 'export-html', 'export-receipt', 'copy', 'send-feedback'])
+    el<HTMLButtonElement>(id).disabled = busy || !completed || (id === 'copy' && !el('final-text').textContent);
+  el('export-status').textContent = !completed ? '' : busy ? '正在处理当前操作，请稍候；完成后可下载。'
+    : el('final-text').textContent ? '可以下载文件或复制文字。' : '核对已保存，可以下载文件；文字预览未加载，暂时无法复制。';
 }
 async function action(work: () => Promise<void>) {
   checkExpiry();
@@ -453,8 +458,8 @@ function render() {
         const picker = document.createElement('details'); picker.id = `excerpt-${key}`; picker.className = 'fact-excerpts';
         const toggle = document.createElement('summary'); toggle.textContent = '从原文选取片段';
         const help = document.createElement('p'); help.id = `excerpt-help-${key}`;
-        help.textContent = '下列片段都能在当前正文中找到，但具体含义还没核实。只能填入空白草稿；正文有未保存的修改时，暂时不能选取。请对照原图核对，再填写修改依据并保存。'
-          + (key === 'time' ? ' 还须区分活动日期、时段与提交截止。' : '');
+        help.textContent = '下列片段都能在当前正文里找到，但具体含义还没核实。只能填进空白草稿；正文有没保存的修改时，暂时选不了。请对照原图核对，再填写修改依据并保存。'
+          + (key === 'time' ? ' 还要分清活动日期、时段和提交截止。' : '');
         const list = document.createElement('ul'), renderedId = task.id, renderedRevision = task.revision;
         fragments.forEach((fragment, index) => {
           const item = document.createElement('li'), text = document.createElement('p'), context = document.createElement('small'), button = document.createElement('button');
@@ -545,7 +550,7 @@ el('edit-form').addEventListener('submit', event => {
     const values = Object.fromEntries(Object.keys(fields).map(k => [k, el<HTMLTextAreaElement>(`fact-${k}`).value]));
     const content = Object.fromEntries(['original', 'summary', 'description'].map(key => [key, el<HTMLTextAreaElement>(`content-${key}`).value]));
     task = await api<PublicTask>(`/tasks/${task.id}/edit`, 'POST', { revision: task.revision, values, reason, ...(contentEditing ? { content, ...(summarySources ? { summaryMode:el<HTMLSelectElement>('summary-mode').value } : {}) } : {}) });
-    render(); notice(`已保存修改；旧确认与检测已失效，请重新检测。${task.bodyReview?.length && bodyReviewAvailable ? '字段修订与正文对照仍有提示，请查看后核实。' : ''}`);
+    render(); notice(`已保存修改；旧的确认和检测作废了，请重新检测。${task.bodyReview?.length && bodyReviewAvailable ? '字段修订与正文对照仍有提示，请查看后核实。' : ''}`);
   });
 });
 el('audit').addEventListener('click', () => void action(async () => {
@@ -573,10 +578,11 @@ el('review-form').addEventListener('submit', event => {
     const confirmed = Object.fromEntries(Object.keys(fields).map(k => [k, el<HTMLInputElement>(`checked-${k}`).checked]));
     task = await api<PublicTask>(`/tasks/${task.id}/review`, 'POST', { revision: task.revision, confirmed, contentConfirmed: el<HTMLInputElement>('confirm-content').checked });
     render();
+    notice('核对已保存，正在载入结果文字，请稍候。');
     const version = workspaceVersion;
     const response = await fetch(apiUrl(`/tasks/${task.id}/text`));
     const text = await response.text(); requireCurrent(version);
-    if (!response.ok) throw new Error('读取结果失败，任务可能已到期。');
+    if (!response.ok) throw new Error('核对已保存，但结果文字暂时读不到；可尝试下载文件。若任务已删除或到期，请重新开始。');
     el('final-text').textContent = text;
     notice('核对完成，可以导出。这只记录本次核对，不代表接收者已经试用或机构已经采用。'); el('result-title').focus();
   });
@@ -585,13 +591,13 @@ el('cancel').addEventListener('click', () => void action(async () => { if (task)
 el('use-manual').addEventListener('click', () => void action(async () => {
   if (!task || task.source.mode !== 'live' || !['failed', 'cancelled'].includes(task.status)) return;
   await api(`/tasks/${task.id}`, 'DELETE'); clearWorkspace(true);
-  notice('已转为人工转录。请粘贴文字并重新确认材料使用权；图片只作对照，不再调用模型，原到期时间不变。');
+  notice('已转成人工转录。请粘贴文字、重新确认材料使用权；图片只用来对照，不再调模型，到期时间还是原来那个。');
   transcript.focus();
 }));
 el('delete').addEventListener('click', () => void action(async () => {
   if (!task) return;
   await api(`/tasks/${task.id}`, 'DELETE'); clearWorkspace();
-  notice('本机任务和本页资料已清空，已切回合成样例。下载到设备的文件和已发给供应商的资料不会一起删除。'); el('input-title').setAttribute('tabindex', '-1'); el('input-title').focus();
+  notice('本机任务和本页资料清空了，已切回合成样例。下载到设备的文件、发给供应商的资料，不会跟着一起删。'); el('input-title').setAttribute('tabindex', '-1'); el('input-title').focus();
 }));
 for (const format of ['text', 'html', 'receipt']) el(`export-${format}`).addEventListener('click', () => void action(async () => {
   if (!task) return;
@@ -678,6 +684,6 @@ async function init() {
     live.disabled = !config.provider.live; live.textContent = config.provider.live ? `真实视觉识别 · 进程最多 ${config.provider.limit} 次请求 / 无自动重试` : '真实视觉识别 · 未配置，未验证';
     setupMode(); updateGates(); notice('可以先用合成样例试试。想用真实识别，请查看上方处理方式是否可选。');
     if (config.provider.configError) error(`真实识别配置不可用：${config.provider.configError}可以继续使用合成样例或人工转录。`);
-  } catch { el('sample-preview-status').textContent = '示例暂不可用，请确认服务已启动。'; error('无法读取服务配置，请确认服务可用。'); }
+  } catch { el('sample-preview-status').textContent = '示例暂不可用，先确认服务启动了没。'; error('读不到服务配置，先确认服务有没有启动。'); }
 }
 void init();

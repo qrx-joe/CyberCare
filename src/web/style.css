@@ -222,7 +222,7 @@ h3 { font-size: 1.1rem; }
 nav a[aria-current=page] { text-decoration: underline; text-decoration-color: #687e2b; text-decoration-thickness: 3px; text-underline-offset: .55em; }
 .account-button { display: inline-flex; align-items: center; gap: .55rem; background: var(--ink); color: var(--surface); padding: .4rem .75rem .4rem .4rem; font-size: .8rem; }
 .account-button:hover:enabled { color: var(--ink); }
-.account-avatar { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--lime); color: var(--ink); font-size: .85rem; }
+.account-avatar { display: grid; place-items: center; width: max(28px, 1.5em); height: max(28px, 1.5em); border-radius: 50%; background: var(--lime); color: var(--ink); font-size: .85rem; line-height: 1; }
 .task-choices { padding: 3.5rem 0; border-bottom: 1px solid var(--soft-line); }
 .task-choices-heading { margin-bottom: 2rem; }
 .task-choices-heading h2 { margin: 0 0 .6rem; font-size: clamp(1.65rem, 3vw, 2.4rem); line-height: 1.4; letter-spacing: -.04em; }
@@ -306,7 +306,7 @@ label.identity-option { position: relative; display: flex; align-items: center; 
 .identity-option input[type=radio] { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .identity-option strong { display: block; font-size: .9rem; }
 .identity-option small { display: block; font-size: .7rem; color: var(--muted); margin-top: .2rem; }
-.identity-avatar { display: grid; place-items: center; width: 40px; height: 40px; flex: none; background: var(--lime); border: 1px solid var(--line); border-radius: 50%; font-size: 1.15rem; font-weight: 750; }
+.identity-avatar { display: grid; place-items: center; width: max(40px, 1.5em); height: max(40px, 1.5em); flex: none; background: var(--lime); border: 1px solid var(--line); border-radius: 50%; font-size: 1.15rem; font-weight: 750; line-height: 1; }
 .identity-avatar.violet { background: var(--violet); }
 .identity-check { margin-left: auto; visibility: hidden; font-size: 1rem; }
 .identity-option:has(input:checked) .identity-check { visibility: visible; }

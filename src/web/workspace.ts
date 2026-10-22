@@ -166,7 +166,7 @@ export function initWorkspace(options: { continueTask: () => void; setLarge: (ac
       element('session-description').textContent = !task ? '选一张海报开始，也可以先用内置样例试试。'
         : { processing: '海报正在整理，可以去工作台看进度，也可以取消。', needs_review: '草稿准备好了。请对照材料核对，检测后再逐项确认。', completed: '核对完成了，可以下载文字、大字 HTML 和核对记录。', failed: '这次没处理成功，去工作台看看原因和接下来怎么做。', cancelled: '任务已取消，回工作台删除后就能重新开始。' }[task.status];
       element('session-expiry').hidden = !task;
-      element('session-expiry').textContent = task ? `${new Date(task.expiresAt).toLocaleString('zh-CN')} 到期；到期前请及时导出。` : '';
+      element('session-expiry').textContent = task ? `${new Date(task.expiresAt).toLocaleString('zh-CN')} 到期；想留的结果，到期前记得导出。` : '';
       element('session-continue').textContent = task ? { processing: '查看处理进度 ↗', needs_review: '继续核对 ↗', completed: '前往导出结果 ↗', failed: '查看处理说明 ↗', cancelled: '返回海报工作台 ↗' }[task.status] : '开始核对海报 ↗';
     },
   };
