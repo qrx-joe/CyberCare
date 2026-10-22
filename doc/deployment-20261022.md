@@ -61,3 +61,11 @@
 - 公网验证（真实 Chrome 闭环 9/9）：首页/语音转写/截图指导/工作台导航与标题正确；合成语音样例任务创建（模型请求 0）→ 确认 → 文字导出（含"非 WCAG"边界）→ 删除后 404；工作台样例海报回归；`provider.live=false`；页面错误 0。`/api/assistance/config` 可用（audio/guide 均未配置）；`avatar-stage.html` 公网仍 403。证据在 `.local/validation/deployment-20261022-2nd/`，不进 Git。
 - 已知边界：健康接口 `sourceDirty=true` 由外层 stamp 脚本在 CI 时对部署仓库执行 `git status` 计算，晨间同样为 true；`cybercare/dist` 已在部署仓库 ignore 内、本地 status 干净，CI 侧具体变更清单未取得，沿用晨间口径如实保留，不声称完全干净构建。
 - 主项目 GitHub 远端（qrx-joe/CyberCare）本轮未推送，等待用户确认。
+
+## 第三次发布：角色与虚拟人上公网（10/22 用户授权）
+
+- 用户核验部署后指出"右上角虚拟人物与虚拟人都没放上去"；经确认授权两项上公网。
+- 主仓库 `03919a2`：`build.mjs` 帧图改为"存在即嵌入"（`CYBERCARE_INCLUDE_LOCAL_MEDIA=0` 仅继续排除含个人信息的参考图与只读示例）；`server.ts` 虚拟人主机门禁从仅本机改为完整域名白名单；`xingyun.ts` 会话预算本机默认 3 / 公网默认 100 / 上限 300。验证：typecheck、业务 81/81、浏览器 73/73。
+- 部署仓库 `9eadb31`：两张帧图与哈希固定的星云 SDK 以精确 gitignore 例外进入 Codeup 私有仓库（不进公开 GitHub）；外层 stamp 守卫改为校验应用指纹并禁止参考图进产物（原 `localMediaIncluded===false` 断言随公网帧图过时）。本地预检：构建后 host.js 5,168,198 字节、SDK 通过哈希校验、业务测试通过。
+- 公网验证（真实 Chrome）：`/api/avatar/config` 200（`limit:100`；密钥未配前如实显示"星云应用尚未配置"）；`avatar-stage.html`、`xmov-avatar.js` 200；host.js 5.17MB 含帧图；角色 canvas 实测 58,416 个不透明采样像素（文字退路为 0）、磕头入口存在、工作台回归正常、页面错误 0。health：commit `9eadb31`、`localMediaIncluded=true`、新指纹 `049f95ae…`。证据在 `.local/validation/deployment-20261022-3rd/`。
+- 待办（用户操作）：在云效流水线 / K8s 部署环境变量中添加 `XINGYUN_APP_ID`、`XINGYUN_APP_SECRET`（值在本机主项目 `.env`），重新运行流水线后虚拟人播报即启用；Agent 不代填密钥，也不主动创建真实星云会话验证。
