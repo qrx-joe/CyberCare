@@ -26,7 +26,7 @@ export function initNarrator() {
     status.textContent = message; gates();
     if (oldId) {
       try { await api('avatar/stop', { attemptId: oldId }, true); }
-      catch { if (version === epoch) status.textContent = '本机播放已停止，但还没确认星云是否已断开。请到星云控制台核对，确认断开前不要继续试播。'; config = undefined; gates(); }
+      catch { if (version === epoch) status.textContent = '本机播放已停止，但星云会话关闭未获确认；重新打开可重试，若持续异常请到星云控制台核对。'; }
     }
   }
   async function refresh() {

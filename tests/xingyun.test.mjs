@@ -67,13 +67,14 @@ test('鉴权或额度失败后停止新会话，供应商响应与密钥不透�
   assert.equal(calls,2);await gateway.dispose();
 });
 
-test('远端关闭未确认必须持续报错，不能由第二次停止冒充关闭成功', async () => {
-  let calls=0;
-  const gateway=createXingyunGateway({env,sdkAvailable:()=>true,fetcher:async(_,request)=>{calls++;return request.method==='POST'?session():new Response('{}',{status:503});}});
+test('远端关闭未确认必须持续报错，但不整进程停用且可再开新会话', async () => {
+  const gateway=createXingyunGateway({env,sdkAvailable:()=>true,fetcher:async(_,request)=>{return request.method==='POST'?session():new Response('{}',{status:503});}});
   const id=randomUUID();await gateway.open('owner',id,input);
   await assert.rejects(gateway.stop('owner',id),{code:'AVATAR_STOP_UNCONFIRMED'});
   await assert.rejects(gateway.stop('owner',id),{code:'AVATAR_STOP_UNCONFIRMED'});
-  assert.equal(gateway.info().configured,false);assert.equal(calls,2);await gateway.dispose();
+  assert.equal(gateway.info().configured,true);assert.equal(gateway.info().lastFailure.httpStatus,503);
+  const id2=randomUUID();await gateway.open('owner',id2,input);
+  assert.equal(gateway.info().requests,2);assert.equal(gateway.info().configured,true);await gateway.dispose();
 });
 
 test('讲解仅接受已确认的同版本内容；草稿修订后仍需确认，完成后不可悄悄修改', async () => {

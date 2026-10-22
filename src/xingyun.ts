@@ -54,12 +54,16 @@ export function createXingyunGateway(options: Options = {}) {
     catch { lastFailure = { method, stage: 'network' }; throw new Error('Xingyun network failed'); }
     if (!response.ok) { lastFailure = { method, stage: 'http', httpStatus: response.status }; throw new Error('Xingyun request failed'); }
     const raw = await response.text();
-    if (raw.length > 2 * 1024 * 1024 || raw.includes(secret!)) throw new Error('Invalid Xingyun response');
+    // Size guard first, then parse and classify the provider error code before the
+    // secret guard: an auth failure whose body echoes credentials must still count
+    // as auth-class for the stop decision (10/22 fix); no raw text is ever rethrown.
+    if (raw.length > 2 * 1024 * 1024) { lastFailure = { method, stage: 'response-guard', httpStatus: response.status }; throw new Error('Invalid Xingyun response'); }
     const result = JSON.parse(raw) as Record<string, unknown>;
     if (result.error_code !== undefined && result.error_code !== 0) {
       lastFailure = { method, stage: 'provider', httpStatus: response.status, ...(typeof result.error_code === 'number' ? { providerCode: result.error_code } : {}) };
       throw new Error('Xingyun rejected request');
     }
+    if (raw.includes(secret!)) { lastFailure = { method, stage: 'response-guard', httpStatus: response.status }; throw new Error('Invalid Xingyun response'); }
     if (method === 'DELETE' && result.error_code === undefined) { lastFailure = { method, stage: 'stop-response', httpStatus: response.status }; throw new Error('Unconfirmed Xingyun stop'); }
     return result;
   }
@@ -73,7 +77,12 @@ export function createXingyunGateway(options: Options = {}) {
     if (attempt.requestId && appId && secret) {
       attempt.closing = (async () => {
         try { await upstream('DELETE', { request_id: attempt.requestId, ...(attempt.sessionId ? { session_id: attempt.sessionId } : {}), stop_reason: 'cybercare_stop' }); }
-        catch { stopped = true; attempt.closeError = new AppError(502, 'AVATAR_STOP_UNCONFIRMED', '本地播放已停止，但星云会话关闭未获确认。请在星云控制台核对，本进程不再创建会话。'); throw attempt.closeError; }
+        catch {
+          // A transient close failure keeps erroring for THIS attempt (a second stop must
+          // not fake success), but no longer disables the whole process: sessions are
+          // bounded at 120 s upstream, so the residual risk is bounded too (10/22 fix).
+          attempt.closeError = new AppError(502, 'AVATAR_STOP_UNCONFIRMED', '本地播放已停止，但星云会话关闭未获确认；可稍后重试，若持续异常请到星云控制台核对。'); throw attempt.closeError;
+        }
       })();
       return attempt.closing;
     }
@@ -103,10 +112,12 @@ export function createXingyunGateway(options: Options = {}) {
         }
         return result;
       } catch (error) {
-        stopped = true;
+        // Only auth/quota-class failures disable the process (per the documented scope);
+        // transient network or 5xx errors stay recorded in lastFailure and allow retry.
+        if ([401, 402, 403, 429].includes(lastFailure?.httpStatus ?? -1) || [401, 402, 403, 429].includes(lastFailure?.providerCode ?? -1)) stopped = true;
         await closeAttempt(attempt);
         if (error instanceof AppError) throw error;
-        throw new AppError(502, 'AVATAR_CONNECT_FAILED', '星云连接未完成，已回退原有角色。本进程停止继续创建会话；已发出的请求可能消耗积分。');
+        throw new AppError(502, 'AVATAR_CONNECT_FAILED', '星云连接未完成，已回退原有角色。本次尝试未完成；已发出的请求可能消耗积分。');
       }
     },
     async stop(owner: string, id: string) {
