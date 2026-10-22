@@ -1,5 +1,9 @@
 import type { Field, PublicTask, TimeKind, TimeReference } from '../contracts.js';
 import { initHost } from './host.js';
+import { initWorkspace } from './workspace.js';
+void import('./assistance.js').then(module => module.initAssistance()).catch(() => {
+  for (const kind of ['audio', 'guide']) document.getElementById(`${kind}-status`)!.textContent = '此功能需要重启至新版服务后使用。';
+});
 
 function el<T extends HTMLElement = HTMLElement>(id: string) { return document.getElementById(id) as T; }
 const mode = el<HTMLSelectElement>('mode');
@@ -25,6 +29,14 @@ let workspaceVersion = 0;
 let expiresAt = 0;
 let expiryTimer: ReturnType<typeof setTimeout> | undefined;
 const host = initHost();
+let narrator: { setContext(current: PublicTask | null, canRead: boolean): void } = { setContext() {} };
+// An older running server can still serve rebuilt page files. Keep its poster flow usable.
+void import('./narrator.js').then(module => {
+  narrator = module.initNarrator(); narrator.setContext(task, !busy && !dirty && !taskReadInterrupted);
+}).catch(() => {
+  el<HTMLButtonElement>('avatar-open').disabled = true;
+  el('avatar-open').textContent = '语音虚拟人需要启动新版服务';
+});
 const appBase = new URL('.', import.meta.url);
 const imageReview = initImageReview();
 const apiUrl = (path: string) => new URL(`api${path}`, appBase).href;
@@ -66,7 +78,7 @@ function clearWorkspace(keepMaterial = false) {
 }
 function checkExpiry() {
   if (!expiresAt || Date.now() < expiresAt) return;
-  clearWorkspace(); error(); notice('资料已到期，当前页面的用户文字、图片预览和任务已清空。可以重新开始。');
+  clearWorkspace(); error(); notice('资料已到期，本页文字、图片预览和任务已清空。需要的话，可以重新开始。');
 }
 
 function initImageReview() {
@@ -132,18 +144,18 @@ function notice(message: string) { el('notice').textContent = message; }
 function error(message = '') { el('error').textContent = message; el('error').hidden = !message; }
 function showRuntimeWarning(runtime?: { restartRequired:boolean | null }) {
   el('runtime-warning').hidden = runtime?.restartRequired === false;
-  el('runtime-title').textContent = runtime?.restartRequired === true ? '本地演示有更新待加载' : '本地演示版本尚未核对';
+  el('runtime-title').textContent = runtime?.restartRequired === true ? '演示已更新，需要重启服务' : '暂时无法确认演示版本';
   el('runtime-message').textContent = runtime?.restartRequired === true
-    ? '构建文件已更新，当前服务仍使用启动时的版本。先保存所需结果，再重启本地服务并刷新页面。'
-    : '服务没有提供可核对的版本记录，暂不能确认页面与服务端版本一致。可以先保存资料，再按下方步骤更新演示。';
+    ? '文件已经更新，服务还在运行旧版本。请先保存需要的结果，再重启本地服务并刷新页面。'
+    : '服务没有提供版本记录，暂时无法确认它和页面是不是同一版。请先保存资料，再按下方步骤更新演示。';
 }
 // Presentation guidance only: it never fills facts or changes their evidence.
 function fieldGuidance(key: Field, value: string) {
   const missing: Record<Field, string> = {
-    title: '请向活动方核实活动的正式名称；未核实可以留空，确认保留未知。',
-    time: '请核实完整日期（含年份）和开始、结束时间；不要把“明天”自行换算成日期。不确定可以留空。',
-    location: '请向活动方核实场地、具体地址和楼层；不要根据活动名称推测地点。未核实可以留空。',
-    registration: '请向活动方询问报名入口、报名方式和截止时间；没有可靠信息可以留空，确认保留未知。',
+    title: '活动正式叫什么？请向活动方核实，没确认的可以留空，保留未知。',
+    time: '请核实年份、日期和起止时间。海报写“明天”，也别按今天推算；不确定可以留空。',
+    location: '请向活动方问清场地、具体地址和楼层，别靠活动名称猜地点。没确认的可以留空。',
+    registration: '报名入口在哪，怎么报名，何时截止？请向活动方问清楚，没有可靠信息就留空，保留未知。',
   };
   if (!value.trim()) return missing[key];
   if (key === 'time' && /今天|明天|后天|今晚|明晚|本周|这周|下周|本月|下月/.test(value)) {
@@ -167,7 +179,7 @@ function createTimePicker(input: HTMLTextAreaElement, sourceText: string, refere
   const element = document.createElement('details'); element.id = 'time-picker'; element.className = 'time-picker';
   const toggle = document.createElement('summary'); toggle.textContent = '核对不同用途的时间';
   const help = document.createElement('p'); help.id = 'time-picker-help';
-  help.textContent = '分类是识别建议，请对照原图更正；不清楚就保留“用途待核实”。勾选后点击写入，才会填入空白时间草稿；随后仍须填写依据、保存、检测和确认。';
+  help.textContent = '这些时间的分类不一定对，请对照原图核对；拿不准就保留“用途待核实”。勾选条目后，点击写入才会填进空白的时间草稿。接着还要填写依据、保存、检测和确认。';
   const list = document.createElement('ul');
   const rows = references.map((reference, index) => {
     const item = document.createElement('li'), include = document.createElement('input'), selectLabel = document.createElement('label');
@@ -207,7 +219,7 @@ function createTimePicker(input: HTMLTextAreaElement, sourceText: string, refere
     button.disabled = !active || sourceChanged || unavailableSelection || !!input.value || !pending || tooLong;
     status.textContent = sourceChanged || unavailableSelection ? '正文已变化，暂不能写入；可取消勾选，保存正文后重新核对。'
       : input.value ? '时间字段已有内容，不会覆盖。需要改写时请自行修改或清空；也可取消勾选。'
-      : tooLong ? '组合文字超过 500 字符，未截断或写入；请减少勾选条目或手动核对。'
+      : tooLong ? '选中的文字超过 500 字符，这次没有写入，也没有截断。请少选几条，或手动整理后核对。'
       : pending ? '以上选取尚未写入。请写入时间草稿或取消勾选，再进行保存、检测和确认。'
       : '勾选需要保留的条目，并核对用途。';
     return pending;
@@ -312,6 +324,7 @@ function updateGates() {
     button.disabled = busy || task?.status !== 'needs_review' || excerptSourceChanged || !!el<HTMLTextAreaElement>(`fact-${button.dataset.excerptField}`).value;
   }
   const timeSelectionPending = refreshTimePicker?.() ?? false;
+  narrator.setContext(task, !busy && !dirty && !timeSelectionPending && !taskReadInterrupted);
   const audited = !!task?.audit && task.audit.revision === task.revision && !task.audit.violations.some(v => ['serious', 'critical'].includes(v.impact || ''));
   const checked = fields && (Object.keys(fields) as Field[]).every(k => el<HTMLInputElement>(`checked-${k}`).checked) && el<HTMLInputElement>('confirm-content').checked;
   el<HTMLButtonElement>('confirm').disabled = busy || dirty || timeSelectionPending || !audited || !checked;
@@ -343,7 +356,7 @@ function setupMode() {
   document.querySelector<HTMLLabelElement>('label[for=transcript]')!.hidden = live;
   el('text-help').hidden = live;
   el('file-group').hidden = sample;
-  el('mode-help').textContent = sample ? '原创合成海报用于验证流程，不代表真实公益活动或模型效果。' : live ? `图片将发送给已配置的 StepFun 视觉模型。AI 提取不等于事实核实。最多等待 ${modelTimeoutSeconds} 秒，可取消，无自动重试。` : '图片用于对照并在服务端检查，不发送给模型；草稿来自你粘贴的转录文字，不是识别结果。';
+  el('mode-help').textContent = sample ? '这张海报是为演示编写的，可以用来走一遍流程。它不是真实活动，也不用于展示 AI 识别效果。' : live ? `图片会发给 StepFun，识别出来的内容还要你对照原图核实。最多等待 ${modelTimeoutSeconds} 秒，可取消，不会自动重试。` : '请对照图片输入或粘贴文字，草稿会从这些文字中整理。图片只在本机检查和展示，不发给模型，也不会进行 AI 识别。';
   el<HTMLInputElement>('permission').checked = false;
   const preview = el<HTMLImageElement>('poster-preview');
   if (sample || imageUrl) preview.src = sample ? new URL('poster.svg', appBase).href : imageUrl!;
@@ -374,6 +387,7 @@ function render() {
   el('body-review-list').replaceChildren();
   if (task) retainUntil(Date.parse(task.expiresAt));
   host.setTask(task);
+  workspace.setTask(task);
   el('task-controls').hidden = !task;
   el('empty').hidden = !!task;
   el('draft').hidden = task?.status !== 'needs_review';
@@ -402,7 +416,7 @@ function render() {
   const content = task.reviewedContent ?? task.extraction;
   el('body-review-list').replaceChildren(...(task.bodyReview ?? []).map(hint => {
     const item = document.createElement('li');
-    item.textContent = `${fields[hint.field]}：${hint.kind === 'unknown-retained' ? '当前保留未知。' : `当前填写为「${hint.current}」，正文未逐字定位。`}${hint.previous ? `正文仍含此前文字「${hint.previous}」。` : ''}相关修改依据：${hint.reason || '未记录，请核实。'}`;
+    item.textContent = `${fields[hint.field]}：${hint.kind === 'unknown-retained' ? '当前保留未知。' : `当前填的是「${hint.current}」，正文中没有找到完全相同的文字。`}${hint.previous ? `正文中还留着之前的文字「${hint.previous}」。` : ''}当时的修改依据：${hint.reason || '未记录，请核实。'}`;
     return item;
   }));
   for (const key of ['original', 'summary', 'description'] as const) el<HTMLTextAreaElement>(`content-${key}`).value = content[key];
@@ -413,14 +427,14 @@ function render() {
   for (const [key, label] of Object.entries(fields) as [Field, string][]) {
     const wrap = document.createElement('div');
     const l = document.createElement('label'); l.htmlFor = `fact-${key}`; l.textContent = label;
-    const input = document.createElement('textarea'); input.rows = 2; input.id = `fact-${key}`; input.maxLength = 500; input.value = task.values[key]; input.placeholder = '未知；留空可明确确认未知'; input.setAttribute('aria-describedby', `evidence-${key} guidance-${key}`);
+    const input = document.createElement('textarea'); input.rows = 2; input.id = `fact-${key}`; input.maxLength = 500; input.value = task.values[key]; input.placeholder = '不清楚可以留空，确认时保留未知'; input.setAttribute('aria-describedby', `evidence-${key} guidance-${key}`);
     const quote = task.extraction.facts[key].evidence;
     const unlocatedQuote = !!quote.trim() && !task.extraction.original.includes(quote);
-    const evidence = document.createElement('small'); evidence.id = `evidence-${key}`; evidence.textContent = `${unlocatedQuote ? '待核实的识别片段' : '提取依据'}：${quote || '无可定位文字；请核实或保留未知'}${task.changes.some(c => c.field === key) ? '（此字段有人工修订，见证据 JSON）' : ''}`;
+    const evidence = document.createElement('small'); evidence.id = `evidence-${key}`; evidence.textContent = `${unlocatedQuote ? '待核实的识别片段' : '提取依据'}：${quote || '转录中没有找到对应文字；请核实或保留未知'}${task.changes.some(c => c.field === key) ? '（这一项改过，记录见证据 JSON）' : ''}`;
     const guidance = document.createElement('p'); guidance.id = `guidance-${key}`; guidance.className = 'fact-guidance';
     const updateGuidance = () => {
       guidance.textContent = unlocatedQuote && !input.value.trim()
-        ? '当前转录中未找到这段文字的完整对应，字段暂时留空。请对照原图核实后填写，也可以保留未知。'
+        ? '当前转录里找不到完整的这段文字，所以这一项先留空。请对照原图核实后填写，也可以保留未知。'
         : fieldGuidance(key, input.value);
       guidance.hidden = !guidance.textContent;
     };
@@ -439,7 +453,7 @@ function render() {
         const picker = document.createElement('details'); picker.id = `excerpt-${key}`; picker.className = 'fact-excerpts';
         const toggle = document.createElement('summary'); toggle.textContent = '从原文选取片段';
         const help = document.createElement('p'); help.id = `excerpt-help-${key}`;
-        help.textContent = '以下片段能在当前核对正文中逐字定位，未核实含义。仅填入空白草稿；正文有未保存修改时暂停选取。请对照原图、填写修改依据并保存。'
+        help.textContent = '下列片段都能在当前正文中找到，但具体含义还没核实。只能填入空白草稿；正文有未保存的修改时，暂时不能选取。请对照原图核对，再填写修改依据并保存。'
           + (key === 'time' ? ' 还须区分活动日期、时段与提交截止。' : '');
         const list = document.createElement('ul'), renderedId = task.id, renderedRevision = task.revision;
         fragments.forEach((fragment, index) => {
@@ -486,7 +500,7 @@ el('input-form').addEventListener('submit', event => {
     const version = workspaceVersion;
     const file = mode.value === 'sample' ? undefined : image.files?.[0];
     if (mode.value === 'live' && !file) throw new Error('请选择海报图片。');
-    notice(mode.value === 'live' ? `正在调用真实视觉模型，请稍候；最多等待 ${modelTimeoutSeconds} 秒，无自动重试。` : '正在整理转录文字；本路径没有 AI 调用。');
+    notice(mode.value === 'live' ? `正在调用真实视觉模型，请稍候；最多等待 ${modelTimeoutSeconds} 秒，无自动重试。` : '正在整理转录文字；这一步不会调用 AI。');
     const payload = { mode: mode.value, sourceNote: source.value, permission: el<HTMLInputElement>('permission').checked, text: transcript.value, ...(file ? { image: { name: file.name, mime: file.type, data: await imageData(file) } } : {}) };
     requireCurrent(version);
     const signature = JSON.stringify(payload);
@@ -564,7 +578,7 @@ el('review-form').addEventListener('submit', event => {
     const text = await response.text(); requireCurrent(version);
     if (!response.ok) throw new Error('读取结果失败，任务可能已到期。');
     el('final-text').textContent = text;
-    notice('核对完成，可以导出。此记录不代表目标用户验证或机构采用。'); el('result-title').focus();
+    notice('核对完成，可以导出。这只记录本次核对，不代表接收者已经试用或机构已经采用。'); el('result-title').focus();
   });
 });
 el('cancel').addEventListener('click', () => void action(async () => { if (task) { task = await api<PublicTask>(`/tasks/${task.id}/cancel`, 'POST', {}); render(); } }));
@@ -577,7 +591,7 @@ el('use-manual').addEventListener('click', () => void action(async () => {
 el('delete').addEventListener('click', () => void action(async () => {
   if (!task) return;
   await api(`/tasks/${task.id}`, 'DELETE'); clearWorkspace();
-  notice('已删除服务端任务，清空用户资料并恢复合成样例；已下载文件和供应商端资料不在删除范围。'); el('input-title').setAttribute('tabindex', '-1'); el('input-title').focus();
+  notice('本机任务和本页资料已清空，已切回合成样例。下载到设备的文件和已发给供应商的资料不会一起删除。'); el('input-title').setAttribute('tabindex', '-1'); el('input-title').focus();
 }));
 for (const format of ['text', 'html', 'receipt']) el(`export-${format}`).addEventListener('click', () => void action(async () => {
   if (!task) return;
@@ -588,7 +602,7 @@ for (const format of ['text', 'html', 'receipt']) el(`export-${format}`).addEven
   if (!task) return;
   const url = URL.createObjectURL(blob), link = document.createElement('a');
   link.href = url; link.download = `cybercare-${task.id}.${format === 'receipt' ? 'json' : format === 'text' ? 'txt' : 'html'}`;
-  link.click(); URL.revokeObjectURL(url); notice('已下载至你的设备；本地导出没有公开发布。');
+  link.click(); URL.revokeObjectURL(url); notice('文件已下载到你的设备，没有公开发布。');
 }));
 el('copy').addEventListener('click', () => void action(async () => {
   const text = el('final-text').textContent;
@@ -605,9 +619,21 @@ el('send-feedback').addEventListener('click', () => void action(async () => {
   if (!task) return;
   const outcome = el<HTMLSelectElement>('feedback').value;
   if (!outcome) throw new Error('请先选择反馈。');
-  task = await api<PublicTask>(`/tasks/${task.id}/feedback`, 'POST', { outcome }); render(); notice('自报反馈已记录；不等于实际公益效果。');
+  task = await api<PublicTask>(`/tasks/${task.id}/feedback`, 'POST', { outcome }); render(); notice('你的反馈已记录。这是个人反馈，还不能据此判断实际公益效果。');
 }));
-el('large').addEventListener('click', () => { const active = document.documentElement.classList.toggle('large'); el('large').setAttribute('aria-pressed', String(active)); fitFactEditors(); });
+function setLarge(active: boolean) {
+  document.documentElement.classList.toggle('large', active); el('large').setAttribute('aria-pressed', String(active)); fitFactEditors();
+}
+el('large').addEventListener('click', () => setLarge(!document.documentElement.classList.contains('large')));
+const workspace = initWorkspace({
+  setLarge, setMotion: host.setMotion,
+  continueTask() {
+    checkExpiry();
+    const target = el(task ? 'result-title' : 'input-title');
+    target.focus({ preventScroll: true }); target.scrollIntoView({ block: 'start', behavior: 'auto' });
+  },
+});
+workspace.setTask(null);
 window.addEventListener('resize', fitFactEditors);
 const factResizeObserver = new ResizeObserver(fitFactEditors);
 factResizeObserver.observe(el('fact-fields'));
@@ -645,12 +671,12 @@ async function init() {
     el<HTMLSelectElement>('sample-example').value = recordedExample ? 'recorded' : 'sample';
     renderSamplePreview();
     el('confirm-fields').replaceChildren(...(Object.entries(fields) as [Field, string][]).map(([key, name]) => {
-      const label = document.createElement('label'); label.className = 'check'; const input = document.createElement('input'); input.type = 'checkbox'; input.id = `checked-${key}`; input.addEventListener('change', updateGates); label.append(input, document.createTextNode(`已核对${name}，或确认保留未知`)); return label;
+      const label = document.createElement('label'); label.className = 'check'; const input = document.createElement('input'); input.type = 'checkbox'; input.id = `checked-${key}`; input.addEventListener('change', updateGates); label.append(input, document.createTextNode(`我已核对${name}，留空时确认保留未知`)); return label;
     }));
     el('confirm-content').addEventListener('change', updateGates);
     const live = mode.querySelector<HTMLOptionElement>('option[value=live]')!;
     live.disabled = !config.provider.live; live.textContent = config.provider.live ? `真实视觉识别 · 进程最多 ${config.provider.limit} 次请求 / 无自动重试` : '真实视觉识别 · 未配置，未验证';
-    setupMode(); updateGates(); notice('可使用合成样例演示。真实识别是否可用以上方配置状态为准。');
+    setupMode(); updateGates(); notice('可以先用合成样例试试。想用真实识别，请查看上方处理方式是否可选。');
     if (config.provider.configError) error(`真实识别配置不可用：${config.provider.configError}可以继续使用合成样例或人工转录。`);
   } catch { el('sample-preview-status').textContent = '示例暂不可用，请确认服务已启动。'; error('无法读取服务配置，请确认服务可用。'); }
 }

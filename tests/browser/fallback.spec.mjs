@@ -23,7 +23,7 @@ async function stoppedLiveTask(page, status) {
       error:status === 'failed' ? error : undefined,
       extraction:undefined, values:undefined, provider:undefined } });
   });
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   const png = await page.locator('#poster-preview').screenshot();
   await page.locator('#mode').selectOption('live');
   await page.locator('#image').setInputFiles({ name:'synthetic-fallback.png', mimeType:'image/png', buffer:png });
@@ -38,7 +38,7 @@ test('模型失败后保留本页图片和来源，转人工核对并完成实�
   const { id, requests, png } = await stoppedLiveTask(page, 'failed');
   await expect(page.locator('#error')).toContainText('结果不完整');
   await expect(page.locator('#manual-fallback')).toBeVisible();
-  await expect(page.locator('#manual-fallback-help')).toContainText('原到期时间不变');
+  await expect(page.locator('#manual-fallback-help')).toContainText('不会延长材料的保留时间');
   await page.setViewportSize({ width:390, height:900 });
   const directory = '.local/validation/manual-fallback-20261019'; await mkdir(directory, { recursive:true });
   await page.locator('#manual-fallback').screenshot({ path:`${directory}/failure-390.png` });

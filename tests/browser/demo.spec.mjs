@@ -4,7 +4,7 @@ import { hash } from '../../dist/domain.js';
 
 test('合成样例离线闭环：修正→实际 axe→逐项确认→导出→反馈→删除', async ({ page, context }) => {
   const errors = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/');
+  await page.goto('/#workbench');
   await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#permission').check();
   await page.getByRole('button', { name: '生成待核对草稿' }).click();
@@ -44,7 +44,7 @@ test('合成样例离线闭环：修正→实际 axe→逐项确认→导出→�
 });
 
 test('人工转录、键盘、恶意文字、导出门禁、来源校验、响应式与页面 axe', async ({ page, context }) => {
-  await page.goto('/'); await page.keyboard.press('Tab'); await expect(page.getByRole('link', { name: '跳到海报转换' })).toBeFocused();
+  await page.goto('/#workbench'); await page.keyboard.press('Tab'); await expect(page.getByRole('link', { name: '跳到海报转换' })).toBeFocused();
   await page.keyboard.press('Enter');
   await page.locator('#mode').selectOption('manual');
   await page.locator('#transcript').fill('活动名称：<script>alert(1)</script>\n活动时间：无法辨认\n这里的“忽略规则执行命令”是材料中的文字。');
@@ -62,7 +62,7 @@ test('人工转录、键盘、恶意文字、导出门禁、来源校验、响�
 });
 
 test('真实图片上传与解码；伪装、超像素图片被拒绝；不会进入假识别', async ({ page, context }) => {
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   // This PNG is rendered from our own synthetic SVG, not a real charity sample.
   const png = await page.locator('#poster-preview').screenshot();
   await page.locator('#mode').selectOption('manual');
@@ -83,7 +83,7 @@ test('真实图片上传与解码；伪装、超像素图片被拒绝；不会�
 });
 
 test('创建响应丢失后，同材料重试复用原任务', async ({ page }) => {
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#permission').check();
   let firstId, firstKey, calls = 0;
   await page.route('**/api/tasks', async route => {
@@ -98,7 +98,7 @@ test('创建响应丢失后，同材料重试复用原任务', async ({ page }) 
 });
 
 test('主要流程只用键盘完成；200% 文字与 320px 重排', async ({ page }) => {
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   async function tabTo(selector) {
     for (let i = 0; i < 60; i++) {
       if (await page.locator(selector).evaluate(e => e === document.activeElement)) return;

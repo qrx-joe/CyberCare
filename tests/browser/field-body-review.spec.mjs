@@ -4,7 +4,7 @@ import {hash} from '../../dist/domain.js';
 const original='活动名称：合成正文对照核验\n活动时间：2026年10月24日14:00\n活动地点：示例活动室二楼';
 const directory='.local/validation/field-body-review-20261020/browser';
 async function prepare(page){
- await page.goto('/');await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+ await page.goto('/#workbench');await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
  await page.locator('#mode').selectOption('manual');await page.locator('#transcript').fill(original);await page.locator('#source-note').fill('开发者原创合成材料，非真实活动或用户验证');
  await page.locator('#permission').check();await page.locator('#create').click();await expect(page.locator('#draft')).toBeVisible();
  return(await page.locator('#task-meta').textContent()).match(/[a-f0-9-]{36}/)[0];

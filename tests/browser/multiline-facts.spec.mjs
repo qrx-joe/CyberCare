@@ -3,7 +3,7 @@ import { readFile, mkdir } from 'node:fs/promises';
 import { hash } from '../../dist/domain.js';
 
 test('多行日期和地点可完整核对；改其他字段不拼接或丢掉换行，实际导出仍对应检测', async ({ page,context }) => {
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#permission').check(); await page.locator('#create').click();
   await expect(page.locator('#draft')).toBeVisible();
   const location = 'Synthetic Hall\nRoad 1, Floor 4', time = '2026 年 10 月 24 日\n14:00—16:00';

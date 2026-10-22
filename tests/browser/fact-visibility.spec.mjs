@@ -3,7 +3,7 @@ import {test,expect} from '@playwright/test';
 test('长字段无需内部滚动即可完整核对，输入、保存、窄屏与放大后仍可见',async({page,context})=>{
  const errors=[]; page.on('pageerror',error=>errors.push(error.message));
  await page.setViewportSize({width:1440,height:1000});
- await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+ await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
  await page.locator('#permission').check(); await page.locator('#create').click();
  await expect(page.locator('#draft')).toBeVisible();
  const values={title:'开发者原创的长字段可见性合成演示，不是真实活动或真实模型输出',

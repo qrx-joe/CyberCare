@@ -3,7 +3,7 @@ import {mkdir,readFile,writeFile} from 'node:fs/promises';
 
 const directory='.local/validation/source-image-review-20261020/browser';
 async function upload(page){
- await page.goto('/');await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+ await page.goto('/#workbench');await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
  const png=await page.locator('#poster-preview').screenshot();
  await page.locator('#mode').selectOption('manual');
  await expect(page.locator('#source-image-review')).toBeHidden();
@@ -13,7 +13,7 @@ async function upload(page){
 }
 
 test('原图可键盘放大移动并复位，从核对内容返回且不改未保存草稿',async({page,context})=>{
- await page.goto('/');
+ await page.goto('/#workbench');
  await expect(page.locator('#image-zoom-in')).toHaveCount(1,{timeout:1000});
  await upload(page);
  await page.locator('#transcript').fill('活动名称：合成原图核对\n活动时间：2026年10月24日14:00\n活动地点：示例活动室\n报名方式：现场登记');

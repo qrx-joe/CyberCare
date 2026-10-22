@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 async function manualDraft(page, withImage = false) {
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   const png = withImage ? await page.locator('#poster-preview').screenshot() : undefined;
   await page.locator('#mode').selectOption('manual');
   if (png) await page.locator('#image').setInputFiles({ name: 'synthetic-lifecycle.png', mimeType: 'image/png', buffer: png });
@@ -61,7 +61,7 @@ test('资料到期清除文字、文件与 Blob 引用，晚到检测响应不�
 });
 
 test('未提交的人工草稿同样到期，切换模式不能恢复过期输入', async ({ page }) => {
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.clock.install();
   await page.locator('#mode').selectOption('manual');
   await page.locator('#transcript').fill('活动名称：尚未提交的合成资料');

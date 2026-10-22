@@ -15,7 +15,7 @@ async function interruptedTask(page, onRead) {
     if (reads.length === 1) return route.abort('failed');
     await onRead(route, reads.length, created[0]);
   });
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#permission').check(); await page.locator('#create').click();
   await expect(page.locator('#error')).toBeVisible();
   await expect(page.locator('#retry-task')).toBeVisible();
@@ -28,7 +28,7 @@ test('读取中断后可重复恢复同一任务，处理中继续轮询，不�
     if (count === 3) return route.fulfill({ json:{ ...task, status:'processing', extraction:undefined, values:undefined, provider:undefined } });
     await route.continue();
   });
-  await expect(page.locator('#task-read-recovery')).toContainText('不会重新提交图片或调用模型');
+  await expect(page.locator('#task-read-recovery')).toContainText('不会重新上传图片或调用模型');
   const original = state.created[0];
   await page.locator('#retry-task').click();
   await expect(page.locator('#error')).toContainText('状态服务暂不可用');

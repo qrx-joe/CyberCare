@@ -14,7 +14,7 @@ test('未定位的模型引文标为待核实，留空原因与原文缺失区�
     const response=await route.fetch(); const task=await response.json();
     await route.fulfill({response,json:task.extraction?{...task,extraction}:task});
   });
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#mode').selectOption('manual');
   await page.locator('#transcript').fill(original);
   await page.locator('#source-note').fill('开发者合成引用拒绝回归；创建响应明确替代，非模型结果');
@@ -23,10 +23,10 @@ test('未定位的模型引文标为待核实，留空原因与原文缺失区�
   for(const key of ['time','location']){
     await expect(page.locator(`#fact-${key}`)).toHaveValue('');
     await expect(page.locator(`#evidence-${key}`)).toContainText('待核实的识别片段');
-    await expect(page.locator(`#guidance-${key}`)).toContainText('当前转录中未找到');
+    await expect(page.locator(`#guidance-${key}`)).toContainText('找不到完整的这段文字');
   }
   await expect(page.locator('#evidence-time')).toContainText('11月8日 14:00');
-  await expect(page.locator('#guidance-registration')).not.toContainText('当前转录中未找到');
+  await expect(page.locator('#guidance-registration')).not.toContainText('找不到完整的这段文字');
   await page.evaluate(await readFile('node_modules/axe-core/axe.min.js','utf8'));
   expect(await page.evaluate(async()=>(await window.axe.run()).violations.map(v=>v.id))).toEqual([]);
   for(const width of [1440,320]){
@@ -35,10 +35,10 @@ test('未定位的模型引文标为待核实，留空原因与原文缺失区�
     await page.locator('#fact-fields > div').nth(1).screenshot({path:testInfo.outputPath(`rejected-time-${width}.png`)});
   }
   await page.locator('#fact-time').fill('11月8日 14:00');
-  await expect(page.locator('#guidance-time')).not.toContainText('当前转录中未找到');
+  await expect(page.locator('#guidance-time')).not.toContainText('找不到完整的这段文字');
   await expect(page.locator('#evidence-time')).toContainText('待核实的识别片段');
   await expect(page.locator('#audit')).toBeDisabled();
   await page.locator('#fact-time').fill('');
-  await expect(page.locator('#guidance-time')).toContainText('当前转录中未找到');
+  await expect(page.locator('#guidance-time')).toContainText('找不到完整的这段文字');
   await page.locator('#delete').click(); await expect(page.locator('#empty')).toBeVisible();
 });

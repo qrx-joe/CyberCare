@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
 test('新启动服务的运行构建与磁盘一致，日常流程不显示更新提醒', async ({page,context}) => {
-  await page.goto('/');
+  await page.goto('/#workbench');
   await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await expect(page.locator('#runtime-warning')).toBeHidden();
   const config = await (await context.request.get('/api/config')).json();
@@ -21,16 +21,16 @@ test('构建差异与检查失败分别说明；重新核对不清空草稿或�
   });
   let healthy = false;
   await page.route('**/api/health',route=>route.fulfill({status:healthy?200:503,contentType:'application/json',body:JSON.stringify(healthy?{restartRequired:false}:{message:'synthetic unavailable'})}));
-  await page.goto('/');
-  await expect(page.locator('#runtime-title')).toContainText('有更新待加载');
+  await page.goto('/#workbench');
+  await expect(page.locator('#runtime-title')).toContainText('需要重启服务');
   await page.locator('#mode').selectOption('manual');
   await page.locator('#transcript').fill('活动名称：未提交的合成草稿');
   await page.locator('#source-note').fill('开发者合成输入，不得因版本检查丢失');
   await page.locator('#runtime-warning summary').click();
   await expect(page.locator('#runtime-warning')).toContainText('重启会清空');
   await page.locator('#check-runtime').click();
-  await expect(page.locator('#runtime-title')).toContainText('尚未核对');
-  await expect(page.locator('#runtime-message')).not.toContainText('仍使用启动时的版本');
+  await expect(page.locator('#runtime-title')).toContainText('暂时无法确认演示版本');
+  await expect(page.locator('#runtime-message')).not.toContainText('服务还在运行旧版本');
   await page.setViewportSize({width:320,height:900});
   await page.locator('#large').click();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
@@ -57,9 +57,9 @@ test('旧服务不提供版本能力时保留未知，不冒报新版已经加�
     const response=await route.fetch(),config=await response.json(); delete config.runtime;
     await route.fulfill({response,json:config});
   });
-  await page.goto('/');
+  await page.goto('/#workbench');
   await expect(page.locator('#runtime-warning')).toBeVisible();
-  await expect(page.locator('#runtime-title')).toContainText('尚未核对');
-  await expect(page.locator('#runtime-message')).toContainText('暂不能确认');
+  await expect(page.locator('#runtime-title')).toContainText('暂时无法确认演示版本');
+  await expect(page.locator('#runtime-message')).toContainText('暂时无法确认');
   await expect(page.locator('#mode')).toBeEnabled();
 });

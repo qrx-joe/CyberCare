@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 test('首屏整理前后入口展示源图，保持未保存的核对草稿与任务不变', async ({page,context}) => {
   const mutations=[];
   page.on('request',request=>{if(new URL(request.url()).pathname.startsWith('/api/tasks')&&request.method()!=='GET')mutations.push(request.method());});
-  await page.goto('/');await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench');await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#mode').selectOption('manual');
   await page.locator('#transcript').fill('活动名称：合成草稿隔离检查');
   await page.locator('#source-note').fill('开发者原创合成材料；只读入口回归');
@@ -13,6 +13,7 @@ test('首屏整理前后入口展示源图，保持未保存的核对草稿与�
   const id=(await page.locator('#task-meta').textContent()).match(/[a-f0-9-]{36}/)[0];
   await page.locator('#fact-location').fill('尚未保存的合成场地');
   const before=mutations.length;
+  await page.locator('#nav-home').click();
   await page.locator('#hero-example').focus();await page.keyboard.press('Enter');
   await expect(page.locator('#sample-preview')).toHaveAttribute('open','');
   await expect(page.locator('#sample-preview-toggle')).toBeFocused();
@@ -34,9 +35,11 @@ test('只读示例可键盘展开，不创建任务、检测或导出，不覆�
   const requests = [];
   page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/tasks')) requests.push(request.method()); });
   await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.locator('#nav-task').click();
   await page.locator('#mode').selectOption('manual');
   await page.locator('#transcript').fill('活动名称：尚未提交的合成草稿');
   await page.locator('#source-note').fill('保留输入的回归检查');
+  await page.locator('#nav-home').click();
   await page.locator('#sample-preview-toggle').focus(); await page.keyboard.press('Enter');
   await expect(page.locator('#sample-preview-content')).toBeVisible();
   if (await page.locator('#sample-example-picker').isVisible()) await page.locator('#sample-example').selectOption('sample');
@@ -68,7 +71,7 @@ test('只读示例可键盘展开，不创建任务、检测或导出，不覆�
 });
 
 test('核实提示跟随未知字段，不补填日期；修改仍使检测和确认失效', async ({ page, context }) => {
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#mode').selectOption('manual');
   await page.locator('#transcript').fill('活动名称：合成核对测试\n活动时间：10 月 20 日 下午 2 点');
   await page.locator('#source-note').fill('开发者编写的合成缺字段材料');

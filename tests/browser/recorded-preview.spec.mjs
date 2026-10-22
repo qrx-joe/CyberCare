@@ -21,12 +21,13 @@ test('已有结果明确标识存档与未知，切换不写任务、不覆盖�
   await embedded(page,fixture);
   const mutations=[],external=[];
   page.on('request',request=>{const url=new URL(request.url());if(url.pathname.startsWith('/api/tasks')&&request.method()!=='GET')mutations.push(request.method());if(url.protocol==='https:')external.push(url.hostname);});
-  await page.goto('/');await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench');await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#mode').selectOption('manual');
   await page.locator('#transcript').fill('活动名称：合成草稿保持原样');await page.locator('#source-note').fill('开发者合成材料，不是存档来源');
   await page.locator('#permission').check();await page.locator('#create').click();await expect(page.locator('#draft')).toBeVisible();
   const id=(await page.locator('#task-meta').textContent()).match(/[a-f0-9-]{36}/)[0];
   await page.locator('#fact-location').fill('合成未保存内容');const before=mutations.length;
+  await page.locator('#nav-home').click();
   await page.locator('#hero-example').click();await expect(page.locator('#sample-example')).toHaveValue('recorded');
   await expect(page.locator('#sample-reading-title')).toHaveText('合成存档示例');
   await expect(page.locator('#sample-disclosure')).toContainText('已有结果');await expect(page.locator('#sample-disclosure')).toContainText('非真人确认');

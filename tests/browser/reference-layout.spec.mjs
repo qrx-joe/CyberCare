@@ -20,6 +20,7 @@ test('工作台进度跟随真实状态；长结果、大字与窄屏不与页�
   });
   await writeFile(`${evidenceDir}/page-axe-details.json`, JSON.stringify(audit, null, 2));
   expect(audit.violations).toEqual([]);
+  await page.locator('#nav-task').click();
   await expect(page.locator('#step-input')).toHaveAttribute('aria-current', 'step');
   await page.locator('#mode').selectOption('manual');
   const longText = `活动名称：合成长海报排版检查\n活动说明：${'这是一段开发者编写的合成材料，用于检查长文字换行和结果容器，不代表真实活动或用户反馈。'.repeat(120)}\n`;

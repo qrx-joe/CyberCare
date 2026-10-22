@@ -12,7 +12,7 @@ async function createWithQuote(page,original,facts){
     const response=await route.fetch(),task=await response.json();
     await route.fulfill({response,json:task.extraction?{...task,extraction}:task});
   });
-  await page.goto('/');await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench');await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#mode').selectOption('manual');await page.locator('#transcript').fill(original);
   await page.locator('#source-note').fill('开发者合成引文摘录检查；UI 提取响应明确替代，实际保存与检测使用人工任务');
   await page.locator('#permission').check();await page.locator('#create').click();await expect(page.locator('#draft')).toBeVisible();
@@ -25,7 +25,7 @@ test('可定位片段由人显式填入草稿，不自动保存或覆盖，修�
   const id=await createWithQuote(page,original,{title:{value:'合成片段核对',evidence:'合成片段核对'},time:{value:`${date}\n${deadline}`,evidence:`${date}\n${deadline}`},location:empty(),registration:empty()});
   await expect(page.locator('#fact-time')).toHaveValue('');
   await expect(page.locator('#excerpt-time')).toBeVisible({timeout:3000});
-  await expect(page.locator('#excerpt-time')).toContainText('未核实含义');
+  await expect(page.locator('#excerpt-time')).toContainText('具体含义还没核实');
   await page.locator('#audit').click();await expect(page.locator('#audit-output')).toContainText('Critical 0 / Serious 0');
   for(const key of ['title','time','location','registration'])await page.locator(`#checked-${key}`).check();
   await page.locator('#confirm-content').check();await expect(page.locator('#confirm')).toBeEnabled();

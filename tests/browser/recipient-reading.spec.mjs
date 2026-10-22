@@ -5,7 +5,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 const hash = value => createHash('sha256').update(value).digest('hex');
 
 test('接收者可离线按目录和标题定位内容；修订、未知与实际导出版本保持一致', async ({ page, context, browser }) => {
-  await page.goto('/');
+  await page.goto('/#workbench');
   await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#mode').selectOption('manual');
   await page.locator('#transcript').fill('活动名称：合成接收者阅读检查\n活动时间：10月24日14:00—16:00\n活动地点：示例活动室\n说明：这不是实际活动。');

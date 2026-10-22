@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('四项未知时可回到材料对照；输入提示随草稿更新且仍可明确确认未知', async ({page,context}) => {
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#mode').selectOption('manual');
   // Developer-written text exercises the all-unknown state; this is not a stored model response.
   await page.locator('#transcript').fill('这是一段没有活动字段标签的合成输入，仅用于界面回归。');

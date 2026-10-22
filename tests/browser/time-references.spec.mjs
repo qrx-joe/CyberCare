@@ -10,7 +10,7 @@ async function prepare(page,original,timeReferences){
   const response=await route.fetch(),task=await response.json();
   await route.fulfill({response,json:task.extraction?{...task,extraction}:task});
  });
- await page.goto('/');await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+ await page.goto('/#workbench');await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
  await page.locator('#mode').selectOption('manual');await page.locator('#transcript').fill(original);
  await page.locator('#source-note').fill('开发者原创合成时间条目；UI 提取响应为夹具，后端为真实人工任务');
  await page.locator('#permission').check();await page.locator('#create').click();await expect(page.locator('#draft')).toBeVisible();

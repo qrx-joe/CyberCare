@@ -3,7 +3,7 @@ import { hash } from '../../dist/domain.js';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
 test('含年份的相对日期仍在核对页和实际导出中提醒，保留材料原文', async ({ page, context }) => {
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#mode').selectOption('manual');
   const time = '2026 年 10 月，明天 14:00';
   await page.locator('#transcript').fill(`活动名称：合成相对日期核对\n活动时间：${time}\n活动地点：示例活动室\n报名方式：现场登记`);
@@ -29,7 +29,7 @@ test('含年份的相对日期仍在核对页和实际导出中提醒，保留�
 });
 
 test('缺年份提醒进入实际文字和 HTML 下载；检测哈希仍对应同一份文件', async ({ page, context }) => {
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#mode').selectOption('manual');
   await page.locator('#transcript').fill('活动名称：合成日期核对\n活动时间：10 月 24 日 14:00—16:00\n活动地点：示例活动室\n报名方式：现场登记');
   await page.locator('#source-note').fill('开发者原创合成日期材料，不是真实活动');
@@ -65,7 +65,7 @@ test('仍在运行的旧服务未声明全文修订能力时，不显示或发�
     const response = await route.fetch(), config = await response.json(); delete config.contentEditing;
     await route.fulfill({ response, json: config });
   });
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#permission').check(); await page.locator('#create').click();
   await expect(page.locator('#draft')).toBeVisible(); await expect(page.locator('#content-editor')).toBeHidden();
   await page.locator('#fact-title').fill('合成旧服务兼容检查');
@@ -76,7 +76,7 @@ test('仍在运行的旧服务未声明全文修订能力时，不显示或发�
 });
 
 test('完整正文可修订，保存后重新检测，下载与回执保留不同版本', async ({ page, context }) => {
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#permission').check(); await page.locator('#create').click();
   await expect(page.locator('#draft')).toBeVisible();
   const original = await page.locator('#original').textContent();
@@ -112,7 +112,7 @@ test('完整正文可修订，保存后重新检测，下载与回执保留不�
 
 test('浏览器拒绝剪贴板时选择现有结果并说明键盘复制与下载退路', async ({ page }) => {
   await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', { value: { writeText: async () => { throw new Error('synthetic denied'); } } }));
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#permission').check(); await page.locator('#create').click();
   await expect(page.locator('#draft')).toBeVisible();
   await page.locator('#audit').click(); await expect(page.locator('#audit-output')).toContainText('Critical 0 / Serious 0');

@@ -16,7 +16,7 @@ for (const [timeoutMs, seconds] of [[90000,90],[undefined,30]]) {
       ready(); await resumed;
       await route.fulfill({ status:400, json:{ message:'合成测试拦截；未发送真实模型请求。' } });
     });
-    await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+    await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
     const png = await page.locator('#poster-preview').screenshot();
     await page.locator('#mode').selectOption('live');
     await expect(page.locator('#mode-help')).toContainText(`最多等待 ${seconds} 秒`);
@@ -38,7 +38,7 @@ test('真实识别配置无效时说明问题，合成任务仍能继续，不�
     config.provider.configError = '合成测试：等待配置超出允许范围。';
     await route.fulfill({ response, json:config });
   });
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await expect(page.locator('#error')).toContainText('真实识别配置不可用');
   await expect(page.locator('#mode option[value=live]')).toBeDisabled();
   await page.locator('#permission').check(); await page.locator('#create').click();

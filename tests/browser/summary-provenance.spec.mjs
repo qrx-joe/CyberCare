@@ -24,7 +24,7 @@ async function prepare(page, context) {
     expect(seeded.status()).toBe(200);
     await route.fulfill({response, json:await seeded.json()});
   });
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#mode').selectOption('manual');
   await page.locator('#transcript').fill('活动名称：合成概述来源核对\n活动时间：10月24日 14:00\n活动地点：示例活动室\n报名方式：现场登记');
   await page.locator('#source-note').fill('开发者原创合成材料；后端人工任务，不是真实模型或活动');
@@ -125,7 +125,7 @@ test('旧服务没有声明概述来源能力时隐藏控件，也不发送来�
     const response=await route.fetch(),config=await response.json(); delete config.summarySources;
     await route.fulfill({response,json:config});
   });
-  await page.goto('/'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
+  await page.goto('/#workbench'); await expect(page.locator('#transcript')).toHaveValue(/一起读书/);
   await page.locator('#permission').check(); await page.locator('#create').click(); await expect(page.locator('#draft')).toBeVisible();
   await page.locator('#content-editor summary').click();
   await expect(page.locator('#summary-mode-controls')).toBeHidden(); await expect(page.locator('#content-summary')).toBeVisible();
