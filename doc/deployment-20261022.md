@@ -84,3 +84,14 @@
 - 同步脚本改为目录全量扫描：固定清单曾漏掉并行开发中的 `src/audio-review.ts` 导致部署副本编译失败，已在推送前拦截修复。
 - 本次快照含并行会话进行中的 assistance 加固改动（`sourceDirty=true` 如实记录，本地与 CI 双侧 83/83 通过）。流水线 #17 镜像构建耗时约 10 分钟（较平时慢），最终成功上线。
 - 公网复验：`/api/avatar/config` 恢复 `configured:true`、`requests:0`；虚拟人弹窗同意门禁正常；语音/截图/工作台页面回归通过；页面错误 0。
+
+## 第六次发布：协助加固修复上公网 + StepFun 配置进私有镜像（10/22 用户授权，909d4d8）
+
+- 授权：用户授权发布当日协助链路加固修复，并授权将现有 StepFun 配置加入私有部署仓库与镜像。
+- 主仓库两个提交（中间提交单独通过 tsc）：`1178393` 语音修订差异提示与协助失败路径加固（`src/audio-review.ts` 等 12 文件）；`4d498ce` 导出门禁、口语化文案、可访问性 / poster-export 回归与外部案例证据文档。连同此前积压 7 个提交推送 GitHub（`cca67a6..4d498ce`）。验证：typecheck、业务 83/83、浏览器全量 82/82（3.5 分钟）。
+- 快照同步固化为 `.local/deployment-20261022/resync.mjs`（目录全量扫描 + LF 规范化 + snapshot 重生成；package.json/锁文件不动）。本次 `sourceCommit=4d498ce`、`sourceDirty=false`，为首次干净快照。
+- 镜像 `.env`（外层仓库根，随 `COPY . /root/inner` 进镜像、`--env-file-if-exists` 加载）：在星云两项之外新增 `STEPFUN_API_KEY`、`STEPFUN_BASE_URL`、`STEPFUN_MODEL`、`MODEL_TIMEOUT_MS=90000`、`MODEL_MAX_TOKENS=4096`。`MODEL_REQUEST_LIMIT` 不设置——代码默认即硬上限 10 次/进程（本地 `.env` 的 1 为开发测试值，不适用公网）；`PORT`、`XINGYUN_SESSION_LIMIT` 沿用 entry.mjs / 代码默认。
+- 预检（`.local/tools/node22/node.exe` 22.22.2 挂 `D:\Node` 的 npm-cli）：外层 `check`、`cybercare:build`+stamp、外层 4/4、内层业务 83/83 全部通过。
+- 队列事故：推送 `909d4d8` 触发 #19 后排队 25+ 分钟未动。云效页面核实：#18（`9a4b906` redeploy）16:54 起运行 52+ 分钟卡死（同流水线历史最慢 #17 为 11 分 47 秒），阻塞 #19。因 `909d4d8` 直接后继于 `9a4b906`、内容完全包含，取消 #18；#19 立即执行，约 6 分钟上线。Flow 页面每秒重渲染导致 Playwright 点击超时，改用页面内脚本点击完成操作。
+- 公网验证（17:53 切换）：health `909d4d8`、新指纹 `9d886639…`、`localMediaIncluded=true`、`restartRequired=false`；`/api/config` poster `live:true`（step-5-preview，10 次/进程，timeout 90s，maxTokens 4096）——StepFun 为海报/语音/截图共用配置，海报真实提取随本次配置一并启用；`/api/assistance/config` `audio:true`、`guide:true`、`asrModel stepaudio-2.5-asr`、`limit:10`；`/api/avatar/config` 回归 `configured:true`（100 次/进程）。首页、2D 角色动画、语音页真实 Chrome 渲染正常，语音页显示"已配置的真实模式"并带知情同意与预算提示。全部验证 0 模型请求；真实语音转写 / 截图指导的端到端效果由用户首次真实使用验收。
+- 边界与遗留：`sourceDirty=true` 沿用 CI 侧 stamp 口径。StepFun 密钥进入公网调用路径后，任何访客的真实上传都消耗共享 10 次/进程预算，耗尽即 429 停止、无自动重试；单次请求费用与账户余额由 StepFun 侧控制，本口径只限请求数。
