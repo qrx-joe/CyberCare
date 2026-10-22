@@ -76,3 +76,11 @@
 - 采用镜像内 env 方案：`.env`（仅 `XINGYUN_APP_ID`/`XINGYUN_APP_SECRET` 两项）随 Codeup 私有仓库提交（`.gitignore`/`.dockerignore` 精确例外），Dockerfile 启动命令改为 `node --env-file-if-exists=/root/inner/.env server/entry.mjs`（Node 22.22.2 支持）。密钥只存在于私有 Codeup 仓库与私有镜像，不进公开 GitHub、不进 K8s 明文环境、不出现在任何日志输出；MySQL 调试凭据未纳入。
 - 流水线 #16 由推送 bdd5148 自动触发。公网验证：`/api/avatar/config` 返回 `configured:true`（见下方验证记录），虚拟人弹窗可用；Agent 未创建真实星云会话，声音与口型的真实验收由用户自行点击完成。
 - 取舍说明：K8s Secret + 集群侧注入是更标准的做法，但当前无集群权限与流水线字段支持；本方案为比赛演示的最短可靠路径，赛后可迁移。
+
+## 第五次发布：关闭瞬时失败停用网关的修复（ded0b88）
+
+- 事件：公网真实试播 1 次成功后，停止会话的 DELETE 遇星云端 502，旧逻辑立即置"本进程因失败停止"，虚拟人在重启前不可用（17:00 前后在 /api/avatar/config 观测到 `configured:false` + `lastFailure DELETE 502`）。
+- 修复（主仓库 `642be5e`）：关闭未确认仍对该次会话持续报错（语义不变），不再整进程停用；创建失败仅鉴权/额度类（401/402/403/429）停用；`upstream` 将 error_code 分类移到密钥守卫之前，鉴权失败即使响应回显凭据也能正确归类且不透传。验证：业务 83/83、浏览器全量 80/80。
+- 同步脚本改为目录全量扫描：固定清单曾漏掉并行开发中的 `src/audio-review.ts` 导致部署副本编译失败，已在推送前拦截修复。
+- 本次快照含并行会话进行中的 assistance 加固改动（`sourceDirty=true` 如实记录，本地与 CI 双侧 83/83 通过）。流水线 #17 镜像构建耗时约 10 分钟（较平时慢），最终成功上线。
+- 公网复验：`/api/avatar/config` 恢复 `configured:true`、`requests:0`；虚拟人弹窗同意门禁正常；语音/截图/工作台页面回归通过；页面错误 0。
