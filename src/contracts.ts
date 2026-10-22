@@ -79,3 +79,36 @@ export interface BodyReviewHint {
   field: Field; kind: 'not-located' | 'unknown-retained'; current: string; previous?: string; reason: string;
 }
 export type PublicTask = Omit<Task, 'session' | 'controller'> & { bodyReview?: BodyReviewHint[] };
+
+const assistanceSource = { sourceNote: z.string().trim().min(1).max(500), permission: z.literal(true) };
+export const assistanceInputSchema = z.discriminatedUnion('kind', [
+  z.object({ ...assistanceSource, kind: z.literal('audio'), mode: z.enum(['sample', 'manual', 'live']), text: z.string().max(12000).optional(), audio: z.object({ name: z.string().max(150), data: z.string().max(2800000) }).optional() }),
+  z.object({ ...assistanceSource, kind: z.literal('guide'), mode: z.enum(['sample', 'live']), goal: z.string().trim().min(1).max(300), image: inputSchema.shape.image, previousId: z.string().uuid().optional() }),
+]);
+export type AssistanceInput = z.infer<typeof assistanceInputSchema>;
+const citedTextSchema = z.object({ text: z.string().trim().min(1).max(700), evidence: z.string().trim().min(1).max(1000) });
+export const audioResultSchema = z.object({
+  original: z.string().trim().min(1).max(12000), summary: z.array(citedTextSchema).max(8),
+  facts: z.array(z.object({ kind: z.enum(['time', 'location', 'todo']), ...citedTextSchema.shape })).max(12),
+  uncertainties: z.array(z.string().max(700)).max(20), summaryError: z.string().max(300).optional(),
+});
+export const guidanceResultSchema = z.object({
+  screen: z.string().trim().min(1).max(700), visibleText: z.array(z.string().trim().min(1).max(200)).max(20),
+  next: z.object({ action: z.string().trim().min(1).max(500), target: z.string().max(200), position: z.string().max(300), evidence: z.string().max(300) }).nullable(),
+  check: z.string().trim().min(1).max(500), risk: z.enum(['normal', 'sensitive', 'uncertain']),
+  warnings: z.array(z.string().max(700)).max(12),
+});
+export type AudioResult = z.infer<typeof audioResultSchema>;
+export type GuidanceResult = z.infer<typeof guidanceResultSchema>;
+export const assistanceReviewSchema = z.object({ revision: z.number().int().positive(), confirmed: z.literal(true), text: z.string().trim().min(1).max(12000).optional(), summary: z.string().max(6000).optional(), reason: z.string().max(700).optional() });
+export const assistanceEditSchema = z.object({ revision: z.number().int().positive(), text: z.string().trim().min(1).max(12000), summary: z.string().max(6000), reason: z.string().trim().min(1).max(700) });
+export interface AssistanceTask {
+  id: string; kind: AssistanceInput['kind']; mode: AssistanceInput['mode']; session: string;
+  status: 'processing' | 'needs_review' | 'completed' | 'failed' | 'cancelled'; revision: number;
+  createdAt: string; expiresAt: string; sourceNote: string; sourceHash: string; goal?: string; previousId?: string;
+  audio?: AudioResult; guidance?: GuidanceResult; error?: string;
+  providers: { stage: string; model: string | null; usage: unknown; requests: number }[];
+  reviewed?: { text: string; summary: string; reason: string; at: string };
+  confirmedAt?: string; controller: AbortController;
+}
+export type PublicAssistanceTask = Omit<AssistanceTask, 'session' | 'controller'>;

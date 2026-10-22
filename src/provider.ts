@@ -58,6 +58,13 @@ export class ModelFailure extends AppError {
   }
 }
 
+export class AssistanceOutputError extends Error {
+  constructor(public usage: Record<string, number> | null, public finishReason: string | null) { super('Invalid assistance output'); }
+}
+export class AssistanceFailure extends AppError {
+  constructor(message: string, public diagnostic: { httpStatus: number; requests: number; usage: Record<string, number> | null; finishReason: string | null }) { super(502, 'ASSIST_MODEL_FAILED', message); }
+}
+
 export function createProvider(env: NodeJS.ProcessEnv = process.env) {
   const limit = Math.min(10, Math.max(0, Number(env.MODEL_REQUEST_LIMIT ?? 10) || 0));
   const timeoutMs = Number(env.MODEL_TIMEOUT_MS ?? 30000);
@@ -74,6 +81,39 @@ export function createProvider(env: NodeJS.ProcessEnv = process.env) {
   let requests = 0, failures = 0, stopped = false;
   return {
     info: () => ({ live, requests, limit, stopped, model: live ? env.STEPFUN_MODEL : null, promptVersion: PROMPT_VERSION, timeoutMs: validTimeout ? timeoutMs : null, reasoningEffort, maxTokens: validMaxTokens ? maxTokens : null, configError }),
+    assistanceInfo: () => ({ audio: Boolean(env.STEPFUN_API_KEY && env.STEPFUN_BASE_URL) && !configError, guide: live, asrModel: env.STEPFUN_ASR_MODEL || 'stepaudio-2.5-asr', requests, limit, stopped }),
+    async requestAssistance<T>(endpoint: 'audio/asr/sse' | 'chat/completions', payload: Record<string, unknown>, signal: AbortSignal, parse: (body: string) => T) {
+      if (signal.aborted) throw new AppError(409, 'CANCELLED', '任务已取消。');
+      if (configError) throw new AppError(503, 'MODEL_CONFIG', configError);
+      if (!env.STEPFUN_API_KEY || !env.STEPFUN_BASE_URL || (endpoint === 'chat/completions' && !live)) throw new AppError(503, 'MODEL_NOT_CONFIGURED', '尚未配置本项模型，未发送材料。');
+      if (stopped || requests >= limit) throw new AppError(429, 'MODEL_LIMIT', '共享模型请求上限已达或调用已因失败停止，无自动重试。');
+      const base = new URL(env.STEPFUN_BASE_URL);
+      if (base.protocol !== 'https:' || base.hostname !== 'api.stepfun.com' || base.username || base.password || !['/v1', '/v1/', '/step_plan/v1', '/step_plan/v1/'].includes(base.pathname) || base.search || base.hash || base.port) throw new AppError(503, 'MODEL_CONFIG', '模型地址必须为允许的 StepFun v1 接口。');
+      requests++;
+      let status = 0;
+      try {
+        const response = await fetch(`${base.href.replace(/\/$/, '')}/${endpoint}`, { method: 'POST', headers: { Authorization: `Bearer ${env.STEPFUN_API_KEY}`, 'Content-Type': 'application/json', Accept: endpoint === 'audio/asr/sse' ? 'text/event-stream' : 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) });
+        status = response.status;
+        if (!response.ok) {
+          if ([400, 401, 402, 403, 404, 429].includes(status)) stopped = true;
+          await response.body?.cancel();
+          throw new Error('upstream');
+        }
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('empty');
+        const chunks: Uint8Array[] = []; let size = 0;
+        try {
+          while (true) { const part = await reader.read(); if (part.done) break; size += part.value.length; if (size > 512 * 1024) throw new Error('oversize'); chunks.push(part.value); }
+        } finally { await reader.cancel().catch(() => {}); }
+        const result = parse(Buffer.concat(chunks).toString('utf8'));
+        failures = 0; return result;
+      } catch (error) {
+        if (++failures >= 2) stopped = true;
+        if (signal.aborted) throw new AppError(409, 'CANCELLED', '任务已取消；已发出的请求可能仍计费。');
+        const outputError = error instanceof AssistanceOutputError ? error : undefined;
+        throw new AssistanceFailure(`模型请求未完成（${status && status !== 200 ? `HTTP ${status}` : outputError?.finishReason === 'length' ? '输出达到长度上限' : error instanceof Error && error.name === 'TimeoutError' ? '超时' : '响应不完整或格式不符'}），未自动重试。请核对所选接口的模型权限及额度。`, { httpStatus: status, requests: 1, usage: outputError?.usage ?? null, finishReason: outputError?.finishReason ?? null });
+      }
+    },
     async extract(input: Input, signal: AbortSignal) {
       const started = Date.now();
       if (input.mode !== 'live') return {
